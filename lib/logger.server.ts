@@ -1,20 +1,20 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
 import type { LogNiveau, LogRegel } from "./logger";
 
 /**
- * Server-only logger: schrijft elk logbericht als JSON-regel naar
- * logs/app.log (JSON-lines), en logt in development ook leesbaar
- * (met kleur per niveau) naar de console. In productie gaat enkel het
- * logbestand mee — geen console-ruis.
+ * Server-only logger: schrijft elk logbericht naar de `applicatie_logs`-
+ * tabel in Supabase, en logt in development ook leesbaar (met kleur per
+ * niveau) naar de console.
+ *
+ * Waarom een databasetabel i.p.v. een lokaal bestand: Vercel's
+ * serverless functies draaien op een schrijfbeveiligd, kortstondig
+ * bestandssysteem — elke aanroep kan in een ander containertje
+ * terechtkomen, dus een lokaal logbestand is niet betrouwbaar. Een
+ * tabel is de logische vervanger die wél overal werkt.
  *
  * Enkel importeren vanuit Server Components, Server Actions en andere
- * server-only modules (nooit vanuit een "use client"-bestand — dat
- * zou 'fs' proberen te bundelen voor de browser).
+ * server-only modules (nooit vanuit een "use client"-bestand).
  */
-
-const LOG_DIR = path.join(process.cwd(), "logs");
-const LOG_FILE = path.join(LOG_DIR, "app.log");
 
 const KLEUR: Record<LogNiveau, string> = {
   INFO: "\x1b[32m",
@@ -23,30 +23,35 @@ const KLEUR: Record<LogNiveau, string> = {
 };
 const RESET = "\x1b[0m";
 
-async function schrijfNaarBestand(regel: LogRegel): Promise<void> {
+function maakServiceClient() {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false },
+  });
+}
+
+async function schrijfNaarDatabase(input: { code: string; message: string; context?: Record<string, unknown> }, niveau: LogNiveau): Promise<void> {
   try {
-    await fs.mkdir(LOG_DIR, { recursive: true });
-    await fs.appendFile(LOG_FILE, JSON.stringify(regel) + "\n", "utf8");
+    const supabase = maakServiceClient();
+    await supabase.from("applicatie_logs").insert({
+      niveau,
+      code: input.code,
+      bericht: input.message,
+      context: input.context ?? null,
+    });
   } catch {
-    // Een falende logger mag de applicatie nooit doen crashen.
+    // Een falende logger mag de applicatie nooit doen crashen. Als dit
+    // faalt (bv. Supabase tijdelijk onbereikbaar), blijft de console-
+    // output in development nog altijd beschikbaar als noodgreep.
   }
 }
 
-function log(level: LogNiveau, input: { code: string; message: string; context?: Record<string, unknown> }): void {
-  const regel: LogRegel = {
-    timestamp: new Date().toISOString(),
-    level,
-    code: input.code,
-    message: input.message,
-    context: input.context,
-  };
+function log(niveau: LogNiveau, input: { code: string; message: string; context?: Record<string, unknown> }): void {
+  // Altijd naar de console (Vercel vangt stdout/stderr op als Runtime Logs —
+  // dat is op een serverless platform de enige plek waar je dit live ziet).
+  // eslint-disable-next-line no-console
+  console.log(`${KLEUR[niveau]}[${niveau}] ${input.code} — ${input.message}${RESET}`, input.context ?? "");
 
-  if (process.env.NODE_ENV !== "production") {
-    // eslint-disable-next-line no-console
-    console.log(`${KLEUR[level]}[${level}] ${regel.code} — ${regel.message}${RESET}`, input.context ?? "");
-  }
-
-  void schrijfNaarBestand(regel);
+  void schrijfNaarDatabase(input, niveau);
 }
 
 export const logger = {
@@ -55,22 +60,25 @@ export const logger = {
   error: (input: { code: string; message: string; context?: Record<string, unknown> }) => log("ERROR", input),
 };
 
-/** Leest de laatste `limiet` regels uit het logbestand, nieuwste eerst. */
+/** Leest de laatste `limiet` logregels, nieuwste eerst. */
 export async function leesLogRegels(limiet = 200): Promise<LogRegel[]> {
   try {
-    const inhoud = await fs.readFile(LOG_FILE, "utf8");
-    const regels = inhoud
-      .split("\n")
-      .filter((r) => r.trim().length > 0)
-      .map((r) => {
-        try {
-          return JSON.parse(r) as LogRegel;
-        } catch {
-          return null;
-        }
-      })
-      .filter((r): r is LogRegel => r !== null);
-    return regels.reverse().slice(0, limiet);
+    const supabase = maakServiceClient();
+    const { data, error } = await supabase
+      .from("applicatie_logs")
+      .select("aangemaakt_op, niveau, code, bericht, context")
+      .order("aangemaakt_op", { ascending: false })
+      .limit(limiet);
+
+    if (error || !data) return [];
+
+    return data.map((r) => ({
+      timestamp: r.aangemaakt_op,
+      level: r.niveau as LogNiveau,
+      code: r.code,
+      message: r.bericht,
+      context: (r.context as Record<string, unknown> | null) ?? undefined,
+    }));
   } catch {
     return [];
   }
@@ -78,8 +86,10 @@ export async function leesLogRegels(limiet = 200): Promise<LogRegel[]> {
 
 export async function wisLogbestand(): Promise<void> {
   try {
-    await fs.writeFile(LOG_FILE, "", "utf8");
+    const supabase = maakServiceClient();
+    // Verwijdert alle rijen (geen enkele voldoet aan een onmogelijke id-check niet nodig — delete zonder filter verwijdert alles).
+    await supabase.from("applicatie_logs").delete().gte("aangemaakt_op", "1970-01-01");
   } catch {
-    // Niets om te doen als het bestand niet bestaat — resultaat is toch leeg.
+    // Niets om te doen als het wissen faalt — de gebruiker kan het opnieuw proberen.
   }
 }
