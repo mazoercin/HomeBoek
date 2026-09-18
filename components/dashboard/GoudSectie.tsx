@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Coins, Plus } from "lucide-react";
 import type { GoudTransactie } from "@/types/database";
+import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
 interface Props {
   transacties: GoudTransactie[];
@@ -67,7 +68,7 @@ export function GoudSectie({ transacties, onToevoegen }: Props) {
         ))}
       </ul>
 
-      {formOpen ? (
+      <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-goud/20 pt-3">
           <div>
             <label className="veld-label">Bedrag (€)</label>
@@ -91,7 +92,8 @@ export function GoudSectie({ transacties, onToevoegen }: Props) {
             </button>
           </div>
         </form>
-      ) : (
+      </Uitklapbaar>
+      {!formOpen && (
         <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
           <Plus size={18} strokeWidth={2.5} /> Inleg registreren
         </button>

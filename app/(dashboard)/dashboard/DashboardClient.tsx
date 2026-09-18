@@ -20,6 +20,7 @@ import { GoudSectie } from "@/components/dashboard/GoudSectie";
 import { VoorstellenSectie } from "@/components/dashboard/VoorstellenSectie";
 import { GrafiekenSectie } from "@/components/dashboard/GrafiekenSectie";
 import { GevarenZone } from "@/components/dashboard/GevarenZone";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import {
   zetVasteKostBetaald,
   zetFactuurBetaald,
@@ -40,7 +41,15 @@ import {
   wisAlleData,
 } from "./actions";
 
-export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; huidigeMaand: string }) {
+export function DashboardClient({
+  data,
+  huidigeMaand,
+  familienaam,
+}: {
+  data: DashboardData;
+  huidigeMaand: string;
+  familienaam: string | null;
+}) {
   const [periode, setPeriode] = useState<Periode>(1);
 
   const geskipteIds = useMemo(() => data.geskipteUitgaven.map((g) => g.extra_uitgave_id), [data]);
@@ -113,13 +122,22 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
 
   return (
     <div className="space-y-6 lg:space-y-8">
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">
+          {familienaam ?? "Jullie"} <span className="text-primair">— Gezinsfinanciën</span>
+        </h1>
+        <p className="text-sm text-tekst-secundair mt-0.5">Alles overzichtelijk op één plek.</p>
+      </div>
+
       <PeriodeSelector waarde={periode} onWijzig={setPeriode} />
 
-      <SamenvattingKaarten
-        totaalInkomen={totaalInkomen}
-        openstaandBedrag={openstaandBedrag}
-        watOverblijft={watOverblijft}
-      />
+      <ScrollReveal>
+        <SamenvattingKaarten
+          totaalInkomen={totaalInkomen}
+          openstaandBedrag={openstaandBedrag}
+          watOverblijft={watOverblijft}
+        />
+      </ScrollReveal>
 
       {periode > 1 && (
         <div className="kaart overflow-x-auto animate-fade-in">
@@ -149,85 +167,108 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
         </div>
       )}
 
-      <GrafiekenSectie
-        vastInkomen={data.vastInkomen}
-        vasteKosten={data.vasteKosten}
-        extraUitgaven={data.extraUitgaven}
-      />
+      <ScrollReveal>
+        <GrafiekenSectie
+          vastInkomen={data.vastInkomen}
+          vasteKosten={data.vasteKosten}
+          extraUitgaven={data.extraUitgaven}
+          onVastInkomenToevoegen={voegVastInkomenToe}
+          onVasteKostToevoegen={voegVasteKostToe}
+          onExtraUitgaveToevoegen={voegExtraUitgaveToe}
+        />
+      </ScrollReveal>
 
-      <InkomenSectie items={data.vastInkomen} onToevoegen={voegVastInkomenToe} onVerwijderen={verwijderVastInkomen} />
+      <ScrollReveal>
+        <InkomenSectie items={data.vastInkomen} onToevoegen={voegVastInkomenToe} onVerwijderen={verwijderVastInkomen} />
+      </ScrollReveal>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
-        <KostenKader
-          titel="Vaste kosten"
-          ankerId="uitgaven-vast"
-          stapTip={{
-            nummer: 2,
-            titel: "Voeg je vaste kosten toe",
-            uitleg: "Kosten die maandelijks terugkomen en niet zomaar stopbaar zijn: huur, verzekering, kredieten.",
-            voorbeeld: "Huur — €1750,00",
-          }}
-          items={data.vasteKosten}
-          betaaldMap={vasteKostenBetaaldMap}
-          maand={huidigeMaand}
-          onZetBetaald={zetVasteKostBetaald}
-          onToevoegen={voegVasteKostToe}
-          onVerwijderen={verwijderVasteKost}
-        />
-        <KostenKader
-          titel="Facturen"
-          ankerId="facturen"
-          stapTip={{
-            nummer: 3,
-            titel: "Voeg je facturen toe",
-            uitleg: "Elektriciteit, mazout/gas, water, internet — alles wat per factuur binnenkomt.",
-            voorbeeld: "Elektriciteit — €120,00",
-          }}
-          items={data.facturen}
-          betaaldMap={facturenBetaaldMap}
-          maand={huidigeMaand}
-          onZetBetaald={zetFactuurBetaald}
-          onToevoegen={voegFactuurToe}
-          onVerwijderen={verwijderFactuur}
-        />
-        <ExtraUitgavenKader
-          items={data.extraUitgaven}
-          geskipteIds={geskipteIds}
-          onToevoegen={voegExtraUitgaveToe}
-          onVerwijderen={verwijderExtraUitgave}
-        />
+        <ScrollReveal vertraging={0}>
+          <KostenKader
+            titel="Vaste kosten"
+            ankerId="uitgaven-vast"
+            stapTip={{
+              nummer: 2,
+              titel: "Voeg je vaste kosten toe",
+              uitleg: "Kosten die maandelijks terugkomen en niet zomaar stopbaar zijn: huur, verzekering, kredieten.",
+              voorbeeld: "Huur — €1750,00",
+            }}
+            items={data.vasteKosten}
+            betaaldMap={vasteKostenBetaaldMap}
+            maand={huidigeMaand}
+            onZetBetaald={zetVasteKostBetaald}
+            onToevoegen={voegVasteKostToe}
+            onVerwijderen={verwijderVasteKost}
+          />
+        </ScrollReveal>
+        <ScrollReveal vertraging={80}>
+          <KostenKader
+            titel="Facturen"
+            ankerId="facturen"
+            stapTip={{
+              nummer: 3,
+              titel: "Voeg je facturen toe",
+              uitleg: "Elektriciteit, mazout/gas, water, internet — alles wat per factuur binnenkomt.",
+              voorbeeld: "Elektriciteit — €120,00",
+            }}
+            items={data.facturen}
+            betaaldMap={facturenBetaaldMap}
+            maand={huidigeMaand}
+            onZetBetaald={zetFactuurBetaald}
+            onToevoegen={voegFactuurToe}
+            onVerwijderen={verwijderFactuur}
+          />
+        </ScrollReveal>
+        <ScrollReveal vertraging={160}>
+          <ExtraUitgavenKader
+            items={data.extraUitgaven}
+            geskipteIds={geskipteIds}
+            onToevoegen={voegExtraUitgaveToe}
+            onVerwijderen={verwijderExtraUitgave}
+          />
+        </ScrollReveal>
       </div>
 
-      <WatAlsKader
-        overslaanbareUitgaven={data.extraUitgaven.filter((u) => u.overslaanbaar)}
-        geskipteIds={geskipteIds}
-        huidigWatOverblijft={watOverblijftHuidigeMaand}
-        maand={huidigeMaand}
-        onToepassen={pasWatAlsToe}
-      />
+      <ScrollReveal>
+        <WatAlsKader
+          overslaanbareUitgaven={data.extraUitgaven.filter((u) => u.overslaanbaar)}
+          geskipteIds={geskipteIds}
+          huidigWatOverblijft={watOverblijftHuidigeMaand}
+          maand={huidigeMaand}
+          onToepassen={pasWatAlsToe}
+        />
+      </ScrollReveal>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
-        <DoelenSectie
-          doelen={data.doelen}
-          huidigeMaand={huidigeMaand}
-          onToevoegen={voegDoelToe}
-          onVerwijderen={verwijderDoel}
-          onPauzeren={zetDoelGepauzeerd}
-          onHerschikken={herschikDoelen}
-        />
-        <GoudSectie transacties={data.goudTransacties} onToevoegen={voegGoudTransactieToe} />
+        <ScrollReveal vertraging={0}>
+          <DoelenSectie
+            doelen={data.doelen}
+            huidigeMaand={huidigeMaand}
+            onToevoegen={voegDoelToe}
+            onVerwijderen={verwijderDoel}
+            onPauzeren={zetDoelGepauzeerd}
+            onHerschikken={herschikDoelen}
+          />
+        </ScrollReveal>
+        <ScrollReveal vertraging={80}>
+          <GoudSectie transacties={data.goudTransacties} onToevoegen={voegGoudTransactieToe} />
+        </ScrollReveal>
       </div>
 
       {watOverblijftHuidigeMaand < 0 && (
-        <VoorstellenSectie
-          voorstellen={voorstellen}
-          maand={huidigeMaand}
-          onSkipToepassen={pasWatAlsToe}
-          onDoelPauzeren={zetDoelGepauzeerd}
-        />
+        <ScrollReveal>
+          <VoorstellenSectie
+            voorstellen={voorstellen}
+            maand={huidigeMaand}
+            onSkipToepassen={pasWatAlsToe}
+            onDoelPauzeren={zetDoelGepauzeerd}
+          />
+        </ScrollReveal>
       )}
 
-      <GevarenZone onWissen={wisAlleData} />
+      <ScrollReveal>
+        <GevarenZone onWissen={wisAlleData} />
+      </ScrollReveal>
     </div>
   );
 }

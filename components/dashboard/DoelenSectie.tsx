@@ -16,6 +16,7 @@ import { GripVertical, Trash2, Plus, Pause, Play, Target } from "lucide-react";
 import type { Doel } from "@/types/database";
 import { berekenDoelProjectie, berekenReedsGespaard } from "@/lib/calculations/doelen";
 import { StapTip } from "@/components/ui/StapTip";
+import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
 interface Props {
   doelen: Doel[];
@@ -156,7 +157,7 @@ export function DoelenSectie({
         </SortableContext>
       </DndContext>
 
-      {formOpen ? (
+      <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-4">
           <div>
             <label className="veld-label">Naam</label>
@@ -180,7 +181,8 @@ export function DoelenSectie({
             </button>
           </div>
         </form>
-      ) : (
+      </Uitklapbaar>
+      {!formOpen && (
         <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
           <Plus size={18} strokeWidth={2.5} /> Doel toevoegen
         </button>

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Trash2, Plus, Wallet } from "lucide-react";
 import type { VastInkomen, InkomenBron } from "@/types/database";
 import { StapTip } from "@/components/ui/StapTip";
+import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
 interface Props {
   items: VastInkomen[];
@@ -96,7 +97,7 @@ export function InkomenSectie({ items, onToevoegen, onVerwijderen }: Props) {
         ))}
       </ul>
 
-      {formOpen ? (
+      <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-3">
           <div>
             <label className="veld-label">Bron</label>
@@ -126,7 +127,8 @@ export function InkomenSectie({ items, onToevoegen, onVerwijderen }: Props) {
             </button>
           </div>
         </form>
-      ) : (
+      </Uitklapbaar>
+      {!formOpen && (
         <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
           <Plus size={18} strokeWidth={2.5} /> Toevoegen
         </button>

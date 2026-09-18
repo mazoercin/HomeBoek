@@ -19,11 +19,27 @@
   --kleur-rand: #e2e8f0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%) fixed;
   color: var(--kleur-tekst-primair);
   min-height: 100%;
+}
+
+/* Ankerdoelen (waar de navigatie naartoe scrolt) krijgen ruimte boven
+   zich zodat ze niet onder de vaste kopbalk verdwijnen. */
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 * {

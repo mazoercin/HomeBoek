@@ -1,11 +1,24 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Trash2, TriangleAlert } from "lucide-react";
 
 interface Props {
   onWissen: () => Promise<{ gelukt: boolean; foutmelding?: string }>;
+}
+
+/** Aantal stap-tips op het dashboard (Inkomen, Vaste kosten, Facturen, Extra uitgaven, Doelen). */
+const AANTAL_STAP_TIPS = 5;
+
+/** Wist de "genegeerd"-voorkeur van alle stap-tips, zodat ze na een volledige reset weer verschijnen. */
+function verwijderTipVoorkeuren() {
+  try {
+    for (let i = 1; i <= AANTAL_STAP_TIPS; i++) {
+      localStorage.removeItem(`saldo_tip_genegeerd_${i}`);
+    }
+  } catch {
+    // Geen localStorage beschikbaar — niets om te wissen.
+  }
 }
 
 /**
@@ -16,7 +29,6 @@ interface Props {
  * de impact duidelijk is voor een niet-technisch gezinslid.
  */
 export function GevarenZone({ onWissen }: Props) {
-  const router = useRouter();
   const [bevestigOpen, setBevestigOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -26,8 +38,12 @@ export function GevarenZone({ onWissen }: Props) {
     startTransition(async () => {
       const resultaat = await onWissen();
       if (resultaat.gelukt) {
-        setBevestigOpen(false);
-        router.refresh();
+        verwijderTipVoorkeuren();
+        // Een volledige herlaad (i.p.v. router.refresh()) zorgt ervoor dat
+        // élk dashboardkader écht opnieuw opbouwt en zijn stap-tip dus
+        // vers uit (nu lege) localStorage leest — anders blijven al
+        // gemonteerde tips die al eerder weggeklikt waren onzichtbaar.
+        window.location.reload();
       } else {
         setFout(resultaat.foutmelding ?? "Kon de data niet wissen. Probeer opnieuw.");
       }

@@ -7,6 +7,7 @@ import { CATEGORIE_INFO } from "@/types/database";
 import { CategorieIcon, categorieInfo } from "@/components/ui/CategorieIcon";
 import { Switch } from "@/components/ui/Switch";
 import { StapTip } from "@/components/ui/StapTip";
+import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
 type Kost = VasteKost | Factuur;
 
@@ -143,7 +144,7 @@ export function KostenKader({
         })}
       </ul>
 
-      {formOpen ? (
+      <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-4">
           <div>
             <label className="veld-label">Label</label>
@@ -181,7 +182,8 @@ export function KostenKader({
             </button>
           </div>
         </form>
-      ) : (
+      </Uitklapbaar>
+      {!formOpen && (
         <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
           <Plus size={18} strokeWidth={2.5} /> Toevoegen
         </button>

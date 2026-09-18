@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Trash2, Plus, SlidersHorizontal } from "lucide-react";
 import type { ExtraUitgave } from "@/types/database";
 import { StapTip } from "@/components/ui/StapTip";
+import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
 interface Props {
   items: ExtraUitgave[];
@@ -106,7 +107,7 @@ export function ExtraUitgavenKader({ items, geskipteIds, onToevoegen, onVerwijde
         })}
       </ul>
 
-      {formOpen ? (
+      <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-3">
           <div>
             <label className="veld-label">Label</label>
@@ -130,7 +131,8 @@ export function ExtraUitgavenKader({ items, geskipteIds, onToevoegen, onVerwijde
             </button>
           </div>
         </form>
-      ) : (
+      </Uitklapbaar>
+      {!formOpen && (
         <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
           <Plus size={18} strokeWidth={2.5} /> Toevoegen
         </button>

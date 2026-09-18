@@ -22,6 +22,11 @@ export function SamenvattingKaarten({ totaalInkomen, openstaandBedrag, watOverbl
         <p className="text-3xl font-extrabold text-tekst-primair tabular-nums tracking-tight">
           €{totaalInkomen.toFixed(2)}
         </p>
+        {totaalInkomen === 0 && (
+          <a href="#inkomen" className="text-xs font-semibold text-primair hover:underline mt-1.5 inline-block">
+            Vul in bij Vast inkomen →
+          </a>
+        )}
       </div>
 
       <div className="kaart animate-fade-in-up [animation-delay:60ms]">
@@ -34,6 +39,11 @@ export function SamenvattingKaarten({ totaalInkomen, openstaandBedrag, watOverbl
         <p className="text-3xl font-extrabold text-tekst-primair tabular-nums tracking-tight">
           €{openstaandBedrag.toFixed(2)}
         </p>
+        {openstaandBedrag === 0 && (
+          <a href="#uitgaven-vast" className="text-xs font-semibold text-primair hover:underline mt-1.5 inline-block">
+            Vul in bij Vaste kosten →
+          </a>
+        )}
       </div>
 
       <div

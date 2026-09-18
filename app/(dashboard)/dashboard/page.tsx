@@ -1,10 +1,11 @@
 import { haalDashboardData } from "@/lib/data/dashboard";
+import { haalFamilienaam } from "@/lib/data/instellingen";
 import { maandSleutel } from "@/lib/calculations/maand";
 import { DashboardClient } from "./DashboardClient";
 
 export default async function DashboardPagina() {
   const huidigeMaand = maandSleutel(new Date());
-  const data = await haalDashboardData(huidigeMaand);
+  const [data, familienaam] = await Promise.all([haalDashboardData(huidigeMaand), haalFamilienaam()]);
 
   if (data.fout) {
     return (
@@ -18,5 +19,5 @@ export default async function DashboardPagina() {
     );
   }
 
-  return <DashboardClient data={data} huidigeMaand={huidigeMaand} />;
+  return <DashboardClient data={data} huidigeMaand={huidigeMaand} familienaam={familienaam} />;
 }
