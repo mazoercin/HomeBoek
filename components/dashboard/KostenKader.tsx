@@ -1,14 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Trash2, Plus } from "lucide-react";
 import type { Categorie, VasteKost, Factuur } from "@/types/database";
 import { CATEGORIE_INFO } from "@/types/database";
+import { CategorieIcon, categorieInfo } from "@/components/ui/CategorieIcon";
+import { Switch } from "@/components/ui/Switch";
+import { StapTip } from "@/components/ui/StapTip";
 
 type Kost = VasteKost | Factuur;
 
 interface Props {
   titel: string;
   ankerId: string;
+  stapTip: { nummer: number; titel: string; uitleg: string; voorbeeld: string };
   items: Kost[];
   betaaldMap: Record<string, boolean>;
   maand: string;
@@ -30,6 +35,7 @@ const CATEGORIEEN = Object.keys(CATEGORIE_INFO) as Categorie[];
 export function KostenKader({
   titel,
   ankerId,
+  stapTip,
   items,
   betaaldMap,
   maand,
@@ -83,66 +89,62 @@ export function KostenKader({
 
   return (
     <div className="kaart" id={ankerId}>
-      <h2 className="text-lg font-bold mb-3">{titel}</h2>
+      <h2 className="text-lg font-bold tracking-tight mb-4">{titel}</h2>
 
       {items.length === 0 && !formOpen && (
-        <p className="text-tekst-secundair text-sm mb-3">Nog niets toegevoegd.</p>
+        <StapTip stapNummer={stapTip.nummer} titel={stapTip.titel} uitleg={stapTip.uitleg} voorbeeld={stapTip.voorbeeld} />
       )}
 
-      <ul className="space-y-2 mb-3">
+      <ul className="space-y-2 mb-4">
         {items.map((item) => {
-          const info = CATEGORIE_INFO[item.categorie];
+          const info = categorieInfo(item.categorie);
           const betaald = betaaldMap[item.id] ?? false;
           return (
             <li
               key={item.id}
-              className="flex items-center justify-between gap-2 rounded-xl border border-rand p-3"
+              className="flex items-center gap-3 rounded-xl border border-rand/70 p-3 transition-colors hover:bg-slate-50/80"
             >
-              <div className="min-w-0">
-                <p className="font-bold truncate">
-                  <span aria-hidden>{item.icoon || info.icoon}</span> {item.label}
-                </p>
-                <p className="text-xs text-tekst-secundair truncate">{info.label}</p>
+              <CategorieIcon categorie={item.categorie} />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-tekst-primair truncate leading-tight">{item.label}</p>
+                <p className="text-xs text-tekst-secundair truncate mt-0.5">{CATEGORIE_INFO[item.categorie].label}</p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="font-extrabold">€{item.bedrag.toFixed(2)}</span>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() =>
+              <div className="flex flex-col items-end shrink-0 mr-1">
+                <span className="text-[11px] uppercase tracking-wide text-tekst-secundair font-medium">Bedrag</span>
+                <span className="font-extrabold text-tekst-primair tabular-nums">€{item.bedrag.toFixed(2)}</span>
+              </div>
+              <Switch
+                aan={betaald}
+                label={betaald ? `${item.label} markeren als onbetaald` : `${item.label} markeren als betaald`}
+                disabled={isPending}
+                onWijzig={() =>
+                  startTransition(async () => {
+                    await onZetBetaald(item.id, maand, !betaald);
+                  })
+                }
+              />
+              <button
+                type="button"
+                aria-label={`Verwijder ${item.label}`}
+                disabled={isPending}
+                onClick={() => {
+                  if (confirm(`"${item.label}" verwijderen?`)) {
                     startTransition(async () => {
-                      await onZetBetaald(item.id, maand, !betaald);
-                    })
+                      await onVerwijderen(item.id);
+                    });
                   }
-                  className={`min-h-[44px] px-3 rounded-full text-sm font-bold transition active:scale-95 ${
-                    betaald ? "bg-succes-bg text-succes" : "bg-rand text-tekst-secundair"
-                  }`}
-                >
-                  {betaald ? "✓ Betaald" : "Onbetaald"}
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Verwijder ${item.label}`}
-                  disabled={isPending}
-                  onClick={() => {
-                    if (confirm(`"${item.label}" verwijderen?`)) {
-                      startTransition(async () => {
-                        await onVerwijderen(item.id);
-                      });
-                    }
-                  }}
-                  className="min-h-[44px] min-w-[44px] text-tekst-secundair hover:text-tekort transition"
-                >
-                  🗑️
-                </button>
-              </div>
+                }}
+                className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-tekort hover:bg-tekort-bg transition"
+              >
+                <Trash2 size={17} strokeWidth={2} />
+              </button>
             </li>
           );
         })}
       </ul>
 
       {formOpen ? (
-        <form action={submit} className="space-y-3 border-t border-rand pt-3">
+        <form action={submit} className="space-y-3 border-t border-rand pt-4">
           <div>
             <label className="veld-label">Label</label>
             <input name="label" className="veld-input" required />
@@ -156,7 +158,7 @@ export function KostenKader({
             <select name="categorie" className="veld-input">
               {CATEGORIEEN.map((c) => (
                 <option key={c} value={c}>
-                  {CATEGORIE_INFO[c].icoon} {CATEGORIE_INFO[c].label}
+                  {CATEGORIE_INFO[c].label}
                 </option>
               ))}
             </select>
@@ -180,8 +182,8 @@ export function KostenKader({
           </div>
         </form>
       ) : (
-        <button type="button" className="knop-secundair w-full" onClick={() => setFormOpen(true)}>
-          + Toevoegen
+        <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
+          <Plus size={18} strokeWidth={2.5} /> Toevoegen
         </button>
       )}
     </div>

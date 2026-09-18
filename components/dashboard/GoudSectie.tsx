@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Coins, Plus } from "lucide-react";
 import type { GoudTransactie } from "@/types/database";
 
 interface Props {
@@ -43,20 +44,25 @@ export function GoudSectie({ transacties, onToevoegen }: Props) {
   }
 
   return (
-    <div className="kaart bg-goud-bg" id="goud">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-goud">🪙 Goud</h2>
-        <p className="text-xl font-extrabold text-goud">€{totaal.toFixed(2)}</p>
+    <div className="kaart bg-gradient-to-br from-goud-bg to-white border-goud/20" id="goud">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="inline-flex items-center justify-center rounded-full h-10 w-10 shrink-0 bg-gradient-goud shadow-sm">
+          <Coins size={18} color="#ffffff" strokeWidth={2.25} />
+        </span>
+        <div className="flex-1">
+          <p className="text-[11px] uppercase tracking-wide font-semibold text-goud">Goud</p>
+          <p className="text-xl font-extrabold text-goud tabular-nums leading-tight">€{totaal.toFixed(2)}</p>
+        </div>
       </div>
 
-      <ul className="space-y-1 mb-3">
+      <ul className="space-y-1.5 mb-4">
         {transacties.slice(0, 5).map((t) => (
-          <li key={t.id} className="flex justify-between text-sm text-tekst-primair">
-            <span>
+          <li key={t.id} className="flex justify-between items-center text-sm text-tekst-primair bg-white/60 rounded-lg px-3 py-2">
+            <span className="text-tekst-secundair">
               {t.datum}
               {t.notitie ? ` — ${t.notitie}` : ""}
             </span>
-            <span className="font-bold">€{t.bedrag.toFixed(2)}</span>
+            <span className="font-bold tabular-nums">€{t.bedrag.toFixed(2)}</span>
           </li>
         ))}
       </ul>
@@ -86,8 +92,8 @@ export function GoudSectie({ transacties, onToevoegen }: Props) {
           </div>
         </form>
       ) : (
-        <button type="button" className="knop-secundair w-full" onClick={() => setFormOpen(true)}>
-          + Inleg registreren
+        <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
+          <Plus size={18} strokeWidth={2.5} /> Inleg registreren
         </button>
       )}
     </div>

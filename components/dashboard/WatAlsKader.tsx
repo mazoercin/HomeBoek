@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { Sparkles } from "lucide-react";
 import type { ExtraUitgave } from "@/types/database";
 import { simuleerWatAls } from "@/lib/calculations/watAls";
+import { Switch } from "@/components/ui/Switch";
 
 interface Props {
   overslaanbareUitgaven: ExtraUitgave[];
@@ -46,9 +48,12 @@ export function WatAlsKader({
 
   return (
     <div className="kaart">
-      <h2 className="text-lg font-bold mb-1">Wat als?</h2>
-      <p className="text-tekst-secundair text-sm mb-3">
-        Vink uitgaven aan om te zien wat het je deze maand oplevert.
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles size={18} color="#6366F1" strokeWidth={2.25} />
+        <h2 className="text-lg font-bold tracking-tight">Wat als?</h2>
+      </div>
+      <p className="text-tekst-secundair text-sm mb-4">
+        Zet uitgaven uit om te zien wat het je deze maand oplevert.
       </p>
 
       {beschikbaar.length === 0 ? (
@@ -57,28 +62,28 @@ export function WatAlsKader({
         <ul className="space-y-2 mb-4">
           {beschikbaar.map((uitgave) => (
             <li key={uitgave.id}>
-              <label className="flex items-center gap-3 min-h-[44px] rounded-xl border border-rand px-3">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5"
-                  checked={aangevinkt.includes(uitgave.id)}
-                  onChange={() => toggle(uitgave.id)}
+              <div className="flex items-center gap-3 min-h-[44px] rounded-xl border border-rand/70 px-3 py-1">
+                <span className="flex-1 font-medium text-tekst-primair">{uitgave.label}</span>
+                <span className="font-bold text-tekst-secundair tabular-nums text-sm">€{uitgave.bedrag.toFixed(2)}</span>
+                <Switch
+                  aan={aangevinkt.includes(uitgave.id)}
+                  label={`${uitgave.label} niet deze maand`}
+                  kleurAan="primair"
+                  onWijzig={() => toggle(uitgave.id)}
                 />
-                <span className="flex-1">{uitgave.label} niet deze maand</span>
-                <span className="font-bold text-tekst-secundair">€{uitgave.bedrag.toFixed(2)}</span>
-              </label>
+              </div>
             </li>
           ))}
         </ul>
       )}
 
       {aangevinkt.length > 0 && (
-        <div className="rounded-xl bg-succes-bg p-3 mb-3">
+        <div className="rounded-xl bg-gradient-to-br from-succes-bg to-white border border-succes/20 p-4 mb-4 animate-fade-in">
           <p className="text-sm text-tekst-secundair">Als je deze pauzeert:</p>
-          <p className="text-xl font-extrabold text-succes">
-            €{resultaat.nieuwSaldo.toFixed(2)} over{" "}
-            <span className="text-sm font-normal text-tekst-secundair">
-              (bespaart €{resultaat.besparing.toFixed(2)})
+          <p className="text-2xl font-extrabold text-succes tabular-nums">
+            €{resultaat.nieuwSaldo.toFixed(2)}{" "}
+            <span className="text-sm font-medium text-tekst-secundair">
+              over (bespaart €{resultaat.besparing.toFixed(2)})
             </span>
           </p>
         </div>

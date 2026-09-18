@@ -12,16 +12,16 @@ const OPTIES: { waarde: Periode; label: string }[] = [
 /** Altijd zichtbaar zonder scrollen — horizontaal scrollbare pill-rij op smalle schermen. */
 export function PeriodeSelector({ waarde, onWijzig }: { waarde: Periode; onWijzig: (p: Periode) => void }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+    <div className="inline-flex gap-1 overflow-x-auto p-1 -mx-4 px-4 md:mx-0 md:px-1 bg-white rounded-full border border-rand/70 shadow-card">
       {OPTIES.map((optie) => (
         <button
           key={optie.waarde}
           type="button"
           onClick={() => onWijzig(optie.waarde)}
-          className={`shrink-0 min-h-[44px] px-5 rounded-full font-bold transition active:scale-95 ${
+          className={`shrink-0 min-h-[38px] px-5 rounded-full text-sm font-bold transition-all duration-200 active:scale-95 ${
             waarde === optie.waarde
-              ? "bg-primair text-white"
-              : "bg-white text-tekst-secundair border border-rand"
+              ? "bg-gradient-primair text-white shadow-sm"
+              : "text-tekst-secundair hover:bg-slate-50"
           }`}
         >
           {optie.label}

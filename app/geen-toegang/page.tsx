@@ -1,12 +1,15 @@
 import Link from "next/link";
+import { Lock } from "lucide-react";
 
 /** Nette foutpagina voor AUTH_002 — nooit een crash of witte pagina. */
 export default function GeenToegangPagina() {
   return (
-    <main className="min-h-screen flex items-center justify-center px-4 text-center">
-      <div className="max-w-sm">
-        <div className="text-5xl mb-4">🔒</div>
-        <h1 className="text-xl font-extrabold text-tekst-primair mb-2">
+    <main className="min-h-screen flex items-center justify-center px-4 text-center bg-gradient-to-br from-slate-50 to-tekort-bg">
+      <div className="max-w-sm animate-fade-in-up">
+        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-tekort-bg mb-4">
+          <Lock size={28} color="#F43F5E" strokeWidth={2} />
+        </div>
+        <h1 className="text-xl font-extrabold text-tekst-primair mb-2 tracking-tight">
           Geen toegang tot deze pagina
         </h1>
         <p className="text-tekst-secundair mb-6">

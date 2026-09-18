@@ -18,6 +18,8 @@ import { WatAlsKader } from "@/components/dashboard/WatAlsKader";
 import { DoelenSectie } from "@/components/dashboard/DoelenSectie";
 import { GoudSectie } from "@/components/dashboard/GoudSectie";
 import { VoorstellenSectie } from "@/components/dashboard/VoorstellenSectie";
+import { GrafiekenSectie } from "@/components/dashboard/GrafiekenSectie";
+import { GevarenZone } from "@/components/dashboard/GevarenZone";
 import {
   zetVasteKostBetaald,
   zetFactuurBetaald,
@@ -31,10 +33,11 @@ import {
   voegDoelToe,
   verwijderDoel,
   zetDoelGepauzeerd,
-  wisselDoelPrioriteit,
+  herschikDoelen,
   voegGoudTransactieToe,
   voegVastInkomenToe,
   verwijderVastInkomen,
+  wisAlleData,
 } from "./actions";
 
 export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; huidigeMaand: string }) {
@@ -109,7 +112,7 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       <PeriodeSelector waarde={periode} onWijzig={setPeriode} />
 
       <SamenvattingKaarten
@@ -119,24 +122,24 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
       />
 
       {periode > 1 && (
-        <div className="kaart overflow-x-auto">
-          <h2 className="text-lg font-bold mb-3">Projectie per maand</h2>
+        <div className="kaart overflow-x-auto animate-fade-in">
+          <h2 className="text-lg font-bold tracking-tight mb-4">Projectie per maand</h2>
           <table className="w-full text-sm min-w-[400px]">
             <thead>
               <tr className="text-left text-tekst-secundair">
-                <th className="pb-2">Maand</th>
-                <th className="pb-2">Inkomen</th>
-                <th className="pb-2">Uitgaven</th>
-                <th className="pb-2">Saldo</th>
+                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Maand</th>
+                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Inkomen</th>
+                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Uitgaven</th>
+                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Saldo</th>
               </tr>
             </thead>
             <tbody>
               {projectie.map((m) => (
-                <tr key={m.maand} className="border-t border-rand">
-                  <td className="py-2">{m.maand}</td>
-                  <td className="py-2">€{m.inkomen.toFixed(2)}</td>
-                  <td className="py-2">€{m.uitgaven.toFixed(2)}</td>
-                  <td className={`py-2 font-bold ${m.saldo >= 0 ? "text-succes" : "text-tekort"}`}>
+                <tr key={m.maand} className="border-t border-rand/70">
+                  <td className="py-2.5 font-medium">{m.maand}</td>
+                  <td className="py-2.5 tabular-nums">€{m.inkomen.toFixed(2)}</td>
+                  <td className="py-2.5 tabular-nums">€{m.uitgaven.toFixed(2)}</td>
+                  <td className={`py-2.5 font-bold tabular-nums ${m.saldo >= 0 ? "text-succes" : "text-tekort"}`}>
                     €{m.saldo.toFixed(2)}
                   </td>
                 </tr>
@@ -146,10 +149,24 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <GrafiekenSectie
+        vastInkomen={data.vastInkomen}
+        vasteKosten={data.vasteKosten}
+        extraUitgaven={data.extraUitgaven}
+      />
+
+      <InkomenSectie items={data.vastInkomen} onToevoegen={voegVastInkomenToe} onVerwijderen={verwijderVastInkomen} />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
         <KostenKader
           titel="Vaste kosten"
           ankerId="uitgaven-vast"
+          stapTip={{
+            nummer: 2,
+            titel: "Voeg je vaste kosten toe",
+            uitleg: "Kosten die maandelijks terugkomen en niet zomaar stopbaar zijn: huur, verzekering, kredieten.",
+            voorbeeld: "Huur — €1750,00",
+          }}
           items={data.vasteKosten}
           betaaldMap={vasteKostenBetaaldMap}
           maand={huidigeMaand}
@@ -160,6 +177,12 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
         <KostenKader
           titel="Facturen"
           ankerId="facturen"
+          stapTip={{
+            nummer: 3,
+            titel: "Voeg je facturen toe",
+            uitleg: "Elektriciteit, mazout/gas, water, internet — alles wat per factuur binnenkomt.",
+            voorbeeld: "Elektriciteit — €120,00",
+          }}
           items={data.facturen}
           betaaldMap={facturenBetaaldMap}
           maand={huidigeMaand}
@@ -183,16 +206,14 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
         onToepassen={pasWatAlsToe}
       />
 
-      <InkomenSectie items={data.vastInkomen} onToevoegen={voegVastInkomenToe} onVerwijderen={verwijderVastInkomen} />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
         <DoelenSectie
           doelen={data.doelen}
           huidigeMaand={huidigeMaand}
           onToevoegen={voegDoelToe}
           onVerwijderen={verwijderDoel}
           onPauzeren={zetDoelGepauzeerd}
-          onWisselen={wisselDoelPrioriteit}
+          onHerschikken={herschikDoelen}
         />
         <GoudSectie transacties={data.goudTransacties} onToevoegen={voegGoudTransactieToe} />
       </div>
@@ -205,6 +226,8 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
           onDoelPauzeren={zetDoelGepauzeerd}
         />
       )}
+
+      <GevarenZone onWissen={wisAlleData} />
     </div>
   );
 }

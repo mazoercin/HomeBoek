@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { maakServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
-import { requireSessie } from "@/lib/auth/require-role";
+import { requireSessie, requireRole } from "@/lib/auth/require-role";
 import type { Categorie, InkomenBron } from "@/types/database";
 
 function opnieuwValideren() {
@@ -172,25 +172,14 @@ export async function zetDoelGepauzeerd(id: string, gepauzeerd: boolean) {
   );
 }
 
-/** Wisselt de prioriteit van twee doelen atomisch om (één sleep-actie in de UI = één databasetransactie). */
-export async function wisselDoelPrioriteit(
-  doelIdA: string,
-  prioriteitA: number,
-  doelIdB: string,
-  prioriteitB: number
-) {
+/** Herschrijft de prioriteit van alle doelen in één keer op basis van hun nieuwe volgorde (sleep-en-neerzet). */
+export async function herschikDoelen(doelIdsInNieuweVolgorde: string[]) {
   const supabase = maakServiceClient();
   return veiligUitvoeren(
     "DB_001",
-    "Kon prioriteit van doelen niet omwisselen",
-    { doelIdA, prioriteitA, doelIdB, prioriteitB },
-    () =>
-      supabase.rpc("verplaats_doel_prioriteit", {
-        p_doel_id_a: doelIdA,
-        p_prioriteit_a: prioriteitA,
-        p_doel_id_b: doelIdB,
-        p_prioriteit_b: prioriteitB,
-      })
+    "Kon doelen niet herschikken",
+    { doelIdsInNieuweVolgorde },
+    () => supabase.rpc("herschik_doelen", { p_doel_ids: doelIdsInNieuweVolgorde })
   );
 }
 
@@ -215,4 +204,38 @@ export async function verwijderVastInkomen(id: string) {
   return veiligUitvoeren("DB_001", "Kon vast inkomen niet verwijderen", { id }, () =>
     supabase.from("vast_inkomen").delete().eq("id", id)
   );
+}
+
+// ---------- Gevarenzone ----------
+
+/**
+ * Wist alle financiële data (inkomen, kosten, facturen, extra uitgaven,
+ * doelen, goud) in één atomische databasetransactie. Enkel toegankelijk
+ * voor de admin-rol — dit is bewust zwaarder afgeschermd dan de gewone
+ * dashboard-mutaties, gezien de onomkeerbare impact.
+ */
+export async function wisAlleData(): Promise<{ gelukt: boolean; foutmelding?: string }> {
+  requireRole("admin");
+  const supabase = maakServiceClient();
+
+  try {
+    const { error } = await supabase.rpc("wis_alle_data");
+    if (error) {
+      logger.error({
+        code: "DB_001",
+        message: "Kon alle data niet wissen",
+        context: { query: "wis_alle_data", error: error.message },
+      });
+      return { gelukt: false, foutmelding: "Kon de data niet wissen, probeer opnieuw." };
+    }
+    opnieuwValideren();
+    return { gelukt: true };
+  } catch (error) {
+    logger.error({
+      code: "DB_001",
+      message: "Onverwachte fout bij wissen van alle data",
+      context: { error: error instanceof Error ? error.message : String(error) },
+    });
+    return { gelukt: false, foutmelding: "Kon de data niet wissen, probeer opnieuw." };
+  }
 }

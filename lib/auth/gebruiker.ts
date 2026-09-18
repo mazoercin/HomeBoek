@@ -77,31 +77,3 @@ export async function haalOfMaakAdminGebruiker(gebruikersnaam: string): Promise<
     return null;
   }
 }
-
-/** Bepaalt of er al basisdata is (voor onboarding-redirect na login). */
-export async function heeftBasisdata(): Promise<boolean> {
-  const supabase = maakServiceClient();
-  try {
-    const { count, error } = await supabase
-      .from("vaste_kosten")
-      .select("*", { count: "exact", head: true });
-
-    if (error) {
-      logger.error({
-        code: "DB_001",
-        message: "Kon niet controleren of er basisdata is",
-        context: { query: "vaste_kosten.count", error: error.message },
-      });
-      return false;
-    }
-
-    return (count ?? 0) > 0;
-  } catch (error) {
-    logger.error({
-      code: "DB_001",
-      message: "Onverwachte fout bij controleren basisdata",
-      context: { error: error instanceof Error ? error.message : String(error) },
-    });
-    return false;
-  }
-}

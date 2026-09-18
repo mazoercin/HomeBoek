@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { zetSessieCookie } from "@/lib/auth/session";
-import { haalOfMaakAdminGebruiker, heeftBasisdata } from "@/lib/auth/gebruiker";
+import { haalOfMaakAdminGebruiker } from "@/lib/auth/gebruiker";
 import { logger } from "@/lib/logger.server";
 
 export interface LoginState {
@@ -58,6 +58,5 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     rol: gebruiker.rol,
   });
 
-  const heeftData = await heeftBasisdata();
-  redirect(heeftData ? "/dashboard" : "/onboarding");
+  redirect("/dashboard");
 }

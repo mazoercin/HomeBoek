@@ -3,56 +3,82 @@
 @tailwind utilities;
 
 :root {
-  --kleur-primair: #4f8ef7;
-  --kleur-secundair: #ff7a59;
-  --kleur-succes: #22c55e;
-  --kleur-succes-bg: #e6f9ee;
-  --kleur-tekort: #ef4444;
-  --kleur-tekort-bg: #fdeaea;
+  --kleur-primair: #6366f1;
+  --kleur-primair-dark: #4f46e5;
+  --kleur-secundair: #f59e0b;
+  --kleur-succes: #10b981;
+  --kleur-succes-bg: #ecfdf5;
+  --kleur-tekort: #f43f5e;
+  --kleur-tekort-bg: #fff1f2;
   --kleur-goud: #d4af37;
-  --kleur-goud-bg: #fdf6e3;
-  --kleur-achtergrond: #fff8f0;
+  --kleur-goud-bg: #fdf8e8;
+  --kleur-achtergrond: #f8fafc;
   --kleur-kaart: #ffffff;
-  --kleur-tekst-primair: #1e293b;
+  --kleur-tekst-primair: #0f172a;
   --kleur-tekst-secundair: #64748b;
-  --kleur-rand: #f1f5f9;
+  --kleur-rand: #e2e8f0;
 }
 
 html,
 body {
-  background-color: var(--kleur-achtergrond);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%) fixed;
   color: var(--kleur-tekst-primair);
+  min-height: 100%;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Herbruikbare kaart-stijl: witte achtergrond, ronde hoeken, zachte
-   schaduw — de basisbouwsteen van elk kader in de app. */
+   schaduw die bij hover iets opklimt — de basisbouwsteen van elk kader. */
 .kaart {
-  @apply bg-kaart rounded-xl shadow-sm p-5;
+  @apply bg-kaart rounded-2xl shadow-card border border-rand/60 p-5 transition-shadow duration-200;
 }
 
 .knop-primair {
-  @apply inline-flex items-center justify-center rounded-full bg-primair text-white font-bold
-    min-h-[44px] px-6 transition active:scale-95 hover:brightness-95
+  @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-primair text-white font-bold
+    min-h-[44px] px-6 shadow-sm transition duration-150 active:scale-[0.97] hover:shadow-md hover:brightness-105
     focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primair
-    disabled:opacity-50 disabled:pointer-events-none;
+    disabled:opacity-50 disabled:pointer-events-none disabled:hover:brightness-100;
 }
 
 .knop-secundair {
-  @apply inline-flex items-center justify-center rounded-full bg-white text-tekst-primair font-bold
-    min-h-[44px] px-6 border border-rand transition active:scale-95 hover:bg-rand/40
+  @apply inline-flex items-center justify-center gap-2 rounded-full bg-white text-tekst-primair font-bold
+    min-h-[44px] px-6 border border-rand transition duration-150 active:scale-[0.97] hover:bg-slate-50 hover:border-slate-300
     focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primair
     disabled:opacity-50 disabled:pointer-events-none;
 }
 
 .veld-label {
-  @apply block text-sm font-bold text-tekst-secundair mb-1;
+  @apply block text-[13px] font-semibold uppercase tracking-wide text-tekst-secundair mb-1.5;
 }
 
 .veld-input {
   @apply w-full min-h-[44px] rounded-xl border border-rand bg-white px-4 text-base text-tekst-primair
-    focus:outline-none focus:ring-2 focus:ring-primair transition;
+    transition duration-150 focus:outline-none focus:ring-2 focus:ring-primair/40 focus:border-primair;
 }
 
 .veld-fout {
-  @apply text-sm text-tekort font-bold mt-1;
+  @apply text-sm text-tekort font-semibold mt-1;
+}
+
+/* Sticky navbar: transparant/licht bovenaan de pagina, krijgt een
+   subtiele achtergrond + blur + schaduw zodra er gescrold is — een
+   zacht "fade in" gevoel in plaats van een harde sprong. */
+.navbalk {
+  @apply fixed md:sticky top-0 md:top-0 bottom-0 md:bottom-auto left-0 right-0 z-30 transition-all duration-300;
+}
+
+.navbalk-scrolled {
+  @apply bg-white/80 backdrop-blur-xl shadow-nav;
+}
+
+.navbalk-boven {
+  @apply bg-white/60 backdrop-blur-md md:bg-transparent md:backdrop-blur-none;
+}
+
+/* Vloeiend verschijnen van kaarten bij het laden van de pagina. */
+.fade-in {
+  animation: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
