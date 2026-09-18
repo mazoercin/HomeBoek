@@ -31,7 +31,7 @@ import {
   voegDoelToe,
   verwijderDoel,
   zetDoelGepauzeerd,
-  verplaatsDoelPrioriteit,
+  wisselDoelPrioriteit,
   voegGoudTransactieToe,
   voegVastInkomenToe,
   verwijderVastInkomen,
@@ -192,7 +192,7 @@ export function DashboardClient({ data, huidigeMaand }: { data: DashboardData; h
           onToevoegen={voegDoelToe}
           onVerwijderen={verwijderDoel}
           onPauzeren={zetDoelGepauzeerd}
-          onVerplaatsen={verplaatsDoelPrioriteit}
+          onWisselen={wisselDoelPrioriteit}
         />
         <GoudSectie transacties={data.goudTransacties} onToevoegen={voegGoudTransactieToe} />
       </div>

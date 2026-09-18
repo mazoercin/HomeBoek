@@ -43,10 +43,7 @@ export async function zetVasteKostBetaald(vasteKostId: string, maand: string, be
     "DB_001",
     "Kon betaald-status van vaste kost niet bijwerken",
     { vasteKostId, maand },
-    () =>
-      supabase
-        .from("vaste_kosten_betaald")
-        .upsert({ vaste_kost_id: vasteKostId, maand, betaald }, { onConflict: "vaste_kost_id,maand" })
+    () => supabase.rpc("zet_vaste_kost_betaald", { p_vaste_kost_id: vasteKostId, p_maand: maand, p_betaald: betaald })
   );
 }
 
@@ -56,10 +53,7 @@ export async function zetFactuurBetaald(factuurId: string, maand: string, betaal
     "DB_001",
     "Kon betaald-status van factuur niet bijwerken",
     { factuurId, maand },
-    () =>
-      supabase
-        .from("facturen_betaald")
-        .upsert({ factuur_id: factuurId, maand, betaald }, { onConflict: "factuur_id,maand" })
+    () => supabase.rpc("zet_factuur_betaald", { p_factuur_id: factuurId, p_maand: maand, p_betaald: betaald })
   );
 }
 
@@ -67,18 +61,17 @@ export async function zetFactuurBetaald(factuurId: string, maand: string, betaal
 
 export async function pasWatAlsToe(extraUitgaveIds: string[], maand: string) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren(
-    "DB_001",
-    "Kon wat-als-keuze niet opslaan",
-    { extraUitgaveIds, maand },
-    () =>
-      supabase
-        .from("geskipte_uitgaven")
-        .upsert(
-          extraUitgaveIds.map((id) => ({ extra_uitgave_id: id, maand })),
-          { onConflict: "extra_uitgave_id,maand" }
-        )
-  );
+  return veiligUitvoeren("DB_001", "Kon wat-als-keuze niet opslaan", { extraUitgaveIds, maand }, async () => {
+    for (const id of extraUitgaveIds) {
+      const { error } = await supabase.rpc("zet_extra_uitgave_geskipt", {
+        p_extra_uitgave_id: id,
+        p_maand: maand,
+        p_geskipt: true,
+      });
+      if (error) return { error };
+    }
+    return { error: null };
+  });
 }
 
 export async function zetUitgaveNietGeskipt(extraUitgaveId: string, maand: string) {
@@ -88,11 +81,11 @@ export async function zetUitgaveNietGeskipt(extraUitgaveId: string, maand: strin
     "Kon skip van extra uitgave niet ongedaan maken",
     { extraUitgaveId, maand },
     () =>
-      supabase
-        .from("geskipte_uitgaven")
-        .delete()
-        .eq("extra_uitgave_id", extraUitgaveId)
-        .eq("maand", maand)
+      supabase.rpc("zet_extra_uitgave_geskipt", {
+        p_extra_uitgave_id: extraUitgaveId,
+        p_maand: maand,
+        p_geskipt: false,
+      })
   );
 }
 
@@ -179,13 +172,25 @@ export async function zetDoelGepauzeerd(id: string, gepauzeerd: boolean) {
   );
 }
 
-export async function verplaatsDoelPrioriteit(id: string, nieuwePrioriteit: number) {
+/** Wisselt de prioriteit van twee doelen atomisch om (één sleep-actie in de UI = één databasetransactie). */
+export async function wisselDoelPrioriteit(
+  doelIdA: string,
+  prioriteitA: number,
+  doelIdB: string,
+  prioriteitB: number
+) {
   const supabase = maakServiceClient();
   return veiligUitvoeren(
     "DB_001",
-    "Kon prioriteit van doel niet bijwerken",
-    { id, nieuwePrioriteit },
-    () => supabase.from("doelen").update({ prioriteit: nieuwePrioriteit }).eq("id", id)
+    "Kon prioriteit van doelen niet omwisselen",
+    { doelIdA, prioriteitA, doelIdB, prioriteitB },
+    () =>
+      supabase.rpc("verplaats_doel_prioriteit", {
+        p_doel_id_a: doelIdA,
+        p_prioriteit_a: prioriteitA,
+        p_doel_id_b: doelIdB,
+        p_prioriteit_b: prioriteitB,
+      })
   );
 }
 

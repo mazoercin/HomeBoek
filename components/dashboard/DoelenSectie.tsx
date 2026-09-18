@@ -15,7 +15,12 @@ interface Props {
   }) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onVerwijderen: (id: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onPauzeren: (id: string, gepauzeerd: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
-  onVerplaatsen: (id: string, nieuwePrioriteit: number) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  onWisselen: (
+    doelIdA: string,
+    prioriteitA: number,
+    doelIdB: string,
+    prioriteitB: number
+  ) => Promise<{ gelukt: boolean; foutmelding?: string }>;
 }
 
 /** Doelen zijn goud-vrij hier — goud krijgt zijn eigen sectie/kleur op het dashboard. */
@@ -25,7 +30,7 @@ export function DoelenSectie({
   onToevoegen,
   onVerwijderen,
   onPauzeren,
-  onVerplaatsen,
+  onWisselen,
 }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -39,10 +44,7 @@ export function DoelenSectie({
     const huidige = gesorteerd[index];
     if (!andere || !huidige) return;
     startTransition(async () => {
-      await Promise.all([
-        onVerplaatsen(huidige.id, andere.prioriteit),
-        onVerplaatsen(andere.id, huidige.prioriteit),
-      ]);
+      await onWisselen(huidige.id, andere.prioriteit, andere.id, huidige.prioriteit);
     });
   }
 
