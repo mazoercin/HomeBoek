@@ -9,16 +9,21 @@
 -- zodra hun ouder-rij (vaste_kosten/facturen/extra_uitgaven) verdwijnt.
 -- Eén functie-aanroep = één atomische transactie.
 -- ------------------------------------------------------------
+-- "where true" is verplicht: Supabase-projecten hebben standaard een
+-- veiligheidsextensie die elke DELETE zonder WHERE-clausule blokkeert
+-- (ook binnen een functie), om te voorkomen dat een hele tabel per
+-- ongeluk leeggemaakt wordt. "where true" is functioneel "alles",
+-- maar voldoet expliciet aan die vereiste.
 create or replace function wis_alle_data()
 returns void as $$
 begin
-  delete from vast_inkomen;
-  delete from flexibel_inkomen;
-  delete from extra_inkomen;
-  delete from vaste_kosten;
-  delete from facturen;
-  delete from extra_uitgaven;
-  delete from doelen;
-  delete from goud_transacties;
+  delete from vast_inkomen where true;
+  delete from flexibel_inkomen where true;
+  delete from extra_inkomen where true;
+  delete from vaste_kosten where true;
+  delete from facturen where true;
+  delete from extra_uitgaven where true;
+  delete from doelen where true;
+  delete from goud_transacties where true;
 end;
 $$ language plpgsql;
