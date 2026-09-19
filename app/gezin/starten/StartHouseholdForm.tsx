@@ -10,10 +10,12 @@ import { bouwGastImportPayload } from "@/lib/guest/import";
 export function StartHouseholdForm() {
   const [naam, setNaam] = useState("");
   const [fout, setFout] = useState<string | null>(null);
+  const [diagnose, setDiagnose] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function submit(formData: FormData) {
     setFout(null);
+    setDiagnose(null);
     const waarde = String(formData.get("naam") ?? "").trim();
     startTransition(async () => {
       // Alles hierbinnen in try/catch: een onverwachte fout (bv. een
@@ -42,10 +44,18 @@ export function StartHouseholdForm() {
           console.error("Kon gast-data niet overzetten:", error);
         }
 
-        window.location.href = "/dashboard";
+        // TIJDELIJK diagnose-scherm i.p.v. meteen doorsturen: als "Starten"
+        // eerder wél leek te lukken maar je toch weer hier belandde, zien
+        // we hier exact of het huishouden echt is aangemaakt.
+        setDiagnose(
+          `Huishouden aangemaakt: ${res.huishoudenId ?? "(geen id ontvangen)"}. ` +
+            `Meteen terugvinden bij controle: ${res.gevondenBijControle ? "JA" : "NEE"}.`
+        );
       } catch (error) {
         console.error("Kon huishouden niet starten:", error);
-        setFout("Er ging iets mis. Controleer je internetverbinding en probeer opnieuw.");
+        setFout(
+          `Er ging iets mis: ${error instanceof Error ? error.message : String(error)}. Probeer opnieuw.`
+        );
       }
     });
   }
@@ -71,6 +81,18 @@ export function StartHouseholdForm() {
             onChange={(e) => setNaam(e.target.value)}
           />
           {fout && <p className="veld-fout">{fout}</p>}
+          {diagnose && (
+            <div className="rounded-xl bg-primair-light p-3 text-xs text-tekst-primair space-y-2">
+              <p>{diagnose}</p>
+              <button
+                type="button"
+                className="knop-primair w-full !min-h-[38px] !text-sm"
+                onClick={() => (window.location.href = "/dashboard")}
+              >
+                Naar dashboard
+              </button>
+            </div>
+          )}
           <button type="submit" className="knop-primair w-full" disabled={isPending}>
             {isPending ? "Bezig…" : "Starten"}
           </button>
