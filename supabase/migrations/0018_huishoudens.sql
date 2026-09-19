@@ -46,18 +46,13 @@ alter table profiles drop column rol;
 
 alter table profiles enable row level security;
 revoke all on profiles from anon;
+-- Policies die household_members nodig hebben (profiles_select_huisgenoten)
+-- staan pas verderop, ná het aanmaken van household_members (sectie 3) —
+-- anders bestaat die tabel nog niet op het moment dat de policy-expressie
+-- geparseerd wordt.
 drop policy if exists profiles_select_self on profiles;
 create policy profiles_select_self on profiles
   for select using (user_id = auth.uid());
-drop policy if exists profiles_select_huisgenoten on profiles;
-create policy profiles_select_huisgenoten on profiles
-  for select using (
-    exists (
-      select 1 from household_members hm1
-      join household_members hm2 on hm1.household_id = hm2.household_id
-      where hm1.user_id = auth.uid() and hm2.user_id = profiles.user_id
-    )
-  );
 drop policy if exists profiles_update_self on profiles;
 create policy profiles_update_self on profiles
   for update using (user_id = auth.uid()) with check (user_id = auth.uid());
@@ -100,6 +95,19 @@ create index household_members_user_id_idx on household_members (user_id);
 create unique index household_members_one_owner_idx on household_members (household_id) where role = 'owner';
 alter table household_members enable row level security;
 revoke all on household_members from anon;
+
+-- profiles_select_huisgenoten hoort logisch bij sectie 1, maar kan pas nu
+-- aangemaakt worden: de expressie verwijst naar household_members, die
+-- hierboven pas is aangemaakt.
+drop policy if exists profiles_select_huisgenoten on profiles;
+create policy profiles_select_huisgenoten on profiles
+  for select using (
+    exists (
+      select 1 from household_members hm1
+      join household_members hm2 on hm1.household_id = hm2.household_id
+      where hm1.user_id = auth.uid() and hm2.user_id = profiles.user_id
+    )
+  );
 
 -- ============================================================
 -- 4. household_invites — nooit de ruwe token opslaan, enkel de hash.
