@@ -1,4 +1,21 @@
+import { useEffect, useRef, useState } from "react";
 import { TrendingUp, Wallet, CircleCheck, CircleAlert } from "lucide-react";
+
+/** Korte, subtiele "pulse" (<200ms) telkens `waarde` wijzigt — bv. na het optimistisch toevoegen van een extra kost. */
+function useKortePulse(waarde: number): boolean {
+  const vorige = useRef(waarde);
+  const [pulseren, setPulseren] = useState(false);
+
+  useEffect(() => {
+    if (vorige.current === waarde) return;
+    vorige.current = waarde;
+    setPulseren(true);
+    const tijdje = setTimeout(() => setPulseren(false), 180);
+    return () => clearTimeout(tijdje);
+  }, [waarde]);
+
+  return pulseren;
+}
 
 interface Props {
   totaalInkomen: number;
@@ -19,6 +36,8 @@ export function SamenvattingKaarten({
   nogTeBetalenHuidigeMaand,
 }: Props) {
   const positief = watOverblijft >= 0;
+  const openstaandPulseert = useKortePulse(openstaandBedrag);
+  const watOverblijftPulseert = useKortePulse(watOverblijft);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
@@ -46,7 +65,12 @@ export function SamenvattingKaarten({
           </span>
           <p className="text-[11px] uppercase tracking-wide font-semibold text-tekst-secundair">Openstaand bedrag</p>
         </div>
-        <p className="text-3xl font-extrabold text-tekst-primair tabular-nums tracking-tight">
+        <p
+          data-testid="samenvatting-openstaand"
+          className={`text-3xl font-extrabold text-tekst-primair tabular-nums tracking-tight origin-left transition-transform duration-150 motion-reduce:transition-none ${
+            openstaandPulseert ? "scale-105" : "scale-100"
+          }`}
+        >
           €{openstaandBedrag.toFixed(2)}
         </p>
         {openstaandBedrag === 0 ? (
@@ -84,7 +108,12 @@ export function SamenvattingKaarten({
           </span>
           <p className="text-[11px] uppercase tracking-wide font-semibold text-tekst-secundair">Wat overblijft</p>
         </div>
-        <p className={`text-3xl font-extrabold tabular-nums tracking-tight ${positief ? "text-succes" : "text-tekort"}`}>
+        <p
+          data-testid="samenvatting-watoverblijft"
+          className={`text-3xl font-extrabold tabular-nums tracking-tight origin-left transition-transform duration-150 motion-reduce:transition-none ${
+            positief ? "text-succes" : "text-tekort"
+          } ${watOverblijftPulseert ? "scale-105" : "scale-100"}`}
+        >
           €{watOverblijft.toFixed(2)}
         </p>
         <p className={`text-xs font-semibold mt-1 ${positief ? "text-succes" : "text-tekort"}`}>

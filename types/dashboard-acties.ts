@@ -28,7 +28,16 @@ export interface DashboardActies {
   verwijderVasteKost: (id: string) => Resultaat;
   voegFactuurToe: (data: KostInvoer, maand: string) => Resultaat;
   verwijderFactuur: (id: string) => Resultaat;
-  voegExtraUitgaveToe: (data: { label: string; bedrag: number; overslaanbaar: boolean }, maand: string) => Resultaat;
+  /**
+   * `id` is optioneel: geef zelf een client-gegenereerde UUID mee (zoals
+   * de snel-toevoegen-FAB doet) om dubbele verzending idempotent te
+   * maken — eenzelfde id twee keer invoegen levert geen dubbel item op.
+   * Zonder `id` genereert de opslaglaag er zelf één, zoals voorheen.
+   */
+  voegExtraUitgaveToe: (
+    data: { id?: string; label: string; bedrag: number; overslaanbaar: boolean },
+    maand: string
+  ) => Resultaat;
   verwijderExtraUitgave: (id: string) => Resultaat;
   voegDoelToe: (data: {
     naam: string;

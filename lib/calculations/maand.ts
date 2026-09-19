@@ -47,3 +47,27 @@ export function isNaMaand(sleutel: string, grens: string): boolean {
 export function isVoorOfGelijkAanMaand(sleutel: string, grens: string): boolean {
   return sleutel <= grens;
 }
+
+/**
+ * "Vandaag" als "YYYY-MM-DD", altijd in de Europe/Brussels-tijdzone —
+ * ongeacht in welke tijdzone de server of het toestel effectief draait
+ * (serverless functies draaien vaak in UTC). Nodig voor de standaard-
+ * waarde van het datumveld bij een nieuwe extra kost: rond de
+ * maandgrens (bv. 31 augustus 23:59 Brusselse tijd = 1 september 00:30
+ * enkel al voor UTC) mag "vandaag" nooit stilzwijgend de verkeerde dag
+ * teruggeven.
+ */
+export function vandaagInBrusselAlsDatumString(nu: Date = new Date()): string {
+  // en-CA formatteert consequent als YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(nu);
+}
+
+/**
+ * "YYYY-MM-DD" → "YYYY-MM". Een datum-input-waarde draagt zelf al een
+ * kalenderdag (geen tijdstip/tijdzone), dus dit is inherent tijdzone-
+ * onafhankelijk — in tegenstelling tot maandSleutel(new Date()), die wél
+ * de lokale tijdzone van de omgeving gebruikt.
+ */
+export function maandVanDatumString(datumString: string): string {
+  return datumString.slice(0, 7);
+}

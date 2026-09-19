@@ -26,3 +26,8 @@ next-env.d.ts
 
 ## Supabase CLI
 supabase/.temp/
+
+## Test-artefacten
+test-results/
+playwright-report/
+coverage/

@@ -18,9 +18,11 @@ interface Props {
   }) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onVerwijderen: (id: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onZetGeskipt: (id: string, geskipt: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  /** Id van een net toegevoegd item (bv. via de snel-toevoegen-FAB) — licht kort op in de lijst. */
+  highlightId?: string | null;
 }
 
-export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGeskipt }: Props) {
+export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGeskipt, highlightId }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -61,13 +63,16 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
         />
       )}
 
-      <ul className="space-y-2 mb-2">
+      <ul className="space-y-2 mb-2" data-testid="extra-uitgaven-lijst">
         {zichtbareItems.map((item) => {
           const geskipt = item.geskipt;
           return (
             <li
               key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-rand/70 p-3 transition-colors hover:bg-slate-50/80"
+              data-testid={`extra-uitgave-${item.id}`}
+              className={`flex items-center gap-3 rounded-xl border border-rand/70 p-3 transition-colors duration-150 motion-reduce:transition-none hover:bg-slate-50/80 ${
+                item.id === highlightId ? "bg-primair-light border-primair/40" : ""
+              }`}
             >
               <span className="inline-flex items-center justify-center rounded-full h-10 w-10 shrink-0 bg-secundair-light">
                 <SlidersHorizontal size={18} color="#D97706" strokeWidth={2.25} />

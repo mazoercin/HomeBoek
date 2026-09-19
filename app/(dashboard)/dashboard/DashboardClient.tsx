@@ -24,7 +24,9 @@ import { VoorstellenSectie } from "@/components/dashboard/VoorstellenSectie";
 import { GrafiekenSectie } from "@/components/dashboard/GrafiekenSectie";
 import { GevarenZone } from "@/components/dashboard/GevarenZone";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
-import type { HouseholdRol } from "@/types/database";
+import { ExtraKostWidget, type ExtraKostToevoegResultaat } from "@/components/extra-kost/ExtraKostWidget";
+import type { ExtraKostInvoer } from "@/components/extra-kost/ExtraKostSheet";
+import type { ExtraUitgave, HouseholdRol } from "@/types/database";
 import type { DashboardActies, RegistreerMaandActie } from "@/types/dashboard-acties";
 
 export function DashboardClient({
@@ -51,6 +53,27 @@ export function DashboardClient({
 }) {
   const [periode, setPeriode] = useState<Periode>(1);
 
+  // Optimistische kopie van de extra uitgaven van deze maand: de FAB
+  // (snel-toevoegen) muteert dit meteen, zonder op het netwerk te
+  // wachten, en elke bestaande berekening/kaart hieronder leest hiervan
+  // i.p.v. rechtstreeks van `data.extraUitgaven` — dus geen tweede,
+  // parallelle rekenlogica, enkel een lokale spiegel van dezelfde data.
+  // Zodra de server (of, in gast-modus, localStorage) een verse `data`
+  // teruggeeft, synct dit weer mee.
+  const [extraUitgaven, setExtraUitgaven] = useState(data.extraUitgaven);
+  useEffect(() => {
+    setExtraUitgaven(data.extraUitgaven);
+  }, [data.extraUitgaven]);
+
+  // Id van een net (optimistisch) toegevoegde extra kost — even gemarkeerd
+  // in de lijst, daarna vanzelf weer normaal.
+  const [nieuwItemId, setNieuwItemId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!nieuwItemId) return;
+    const tijdje = setTimeout(() => setNieuwItemId(null), 1500);
+    return () => clearTimeout(tijdje);
+  }, [nieuwItemId]);
+
   // Next.js onthoudt soms de scrollpositie van een eerder bezoek aan
   // dezelfde URL. Bij het wisselen van maand moet je altijd bovenaan
   // dat nieuwe dashboard landen, dus forceren we dat expliciet i.p.v.
@@ -66,12 +89,12 @@ export function DashboardClient({
         extraInkomenHuidigeMaand: data.extraInkomen,
         vasteKosten: data.vasteKosten,
         facturen: data.facturen,
-        extraUitgaven: data.extraUitgaven,
+        extraUitgaven,
         doelBijdragen: data.doelBijdragen,
         startMaand: huidigeMaand,
         aantalMaanden: periode,
       }),
-    [data, huidigeMaand, periode]
+    [data, extraUitgaven, huidigeMaand, periode]
   );
 
   // Rij 1: som over de geselecteerde periode (bij 1 maand = gewoon de bekeken maand).
@@ -95,9 +118,9 @@ export function DashboardClient({
       berekenOpenstaandBedrag({
         vasteKosten: data.vasteKosten,
         facturen: data.facturen,
-        extraUitgaven: data.extraUitgaven,
+        extraUitgaven,
       }),
-    [data]
+    [data, extraUitgaven]
   );
   const watOverblijftHuidigeMaand = berekenWatOverblijft(inkomenHuidigeMaand, uitgavenHuidigeMaand);
 
@@ -117,12 +140,56 @@ export function DashboardClient({
     if (watOverblijftHuidigeMaand >= 0) return [];
     return genereerVoorstellenBijTekort({
       tekort: Math.abs(watOverblijftHuidigeMaand),
-      extraUitgaven: data.extraUitgaven,
+      extraUitgaven,
       doelen: data.doelen,
       vasteKosten: data.vasteKosten,
       facturen: data.facturen,
     });
-  }, [watOverblijftHuidigeMaand, data]);
+  }, [watOverblijftHuidigeMaand, data, extraUitgaven]);
+
+  // ---------- Extra-kost-FAB: optimistisch toevoegen/ongedaan maken ----------
+
+  async function voegExtraKostToe(invoer: ExtraKostInvoer & { id: string }): Promise<ExtraKostToevoegResultaat> {
+    const isHuidigeMaand = invoer.maand === huidigeMaand;
+
+    if (isHuidigeMaand) {
+      const optimistischItem: ExtraUitgave = {
+        id: invoer.id,
+        label: invoer.label,
+        bedrag: invoer.bedrag,
+        overslaanbaar: false,
+        maand: invoer.maand,
+        geskipt: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        household_id: "",
+        created_by: null,
+        updated_by: null,
+        version: 1,
+      };
+      setExtraUitgaven((prev) => [optimistischItem, ...prev]);
+      setNieuwItemId(invoer.id);
+    }
+
+    const resultaat = await acties.voegExtraUitgaveToe(
+      { id: invoer.id, label: invoer.label, bedrag: invoer.bedrag, overslaanbaar: false },
+      invoer.maand
+    );
+
+    if (!resultaat.gelukt) {
+      if (isHuidigeMaand) {
+        setExtraUitgaven((prev) => prev.filter((u) => u.id !== invoer.id));
+      }
+      return { gelukt: false, foutmelding: resultaat.foutmelding };
+    }
+
+    return { gelukt: true, andereMaand: !isHuidigeMaand };
+  }
+
+  function maakExtraKostOngedaan(id: string) {
+    setExtraUitgaven((prev) => prev.filter((u) => u.id !== id));
+    void acties.verwijderExtraUitgave(id);
+  }
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -187,7 +254,7 @@ export function DashboardClient({
         <GrafiekenSectie
           inkomen={data.inkomen}
           vasteKosten={data.vasteKosten}
-          extraUitgaven={data.extraUitgaven}
+          extraUitgaven={extraUitgaven}
           onInkomenToevoegen={(d) => acties.voegInkomenToe(d, huidigeMaand)}
           onVasteKostToevoegen={(d) => acties.voegVasteKostToe(d, huidigeMaand)}
           onExtraUitgaveToevoegen={(d) => acties.voegExtraUitgaveToe(d, huidigeMaand)}
@@ -237,17 +304,18 @@ export function DashboardClient({
         </ScrollReveal>
         <ScrollReveal vertraging={160}>
           <ExtraUitgavenKader
-            items={data.extraUitgaven}
+            items={extraUitgaven}
             onToevoegen={(d) => acties.voegExtraUitgaveToe(d, huidigeMaand)}
             onVerwijderen={acties.verwijderExtraUitgave}
             onZetGeskipt={acties.zetExtraUitgaveGeskipt}
+            highlightId={nieuwItemId}
           />
         </ScrollReveal>
       </div>
 
       <ScrollReveal>
         <WatAlsKader
-          overslaanbareUitgaven={data.extraUitgaven.filter((u) => u.overslaanbaar)}
+          overslaanbareUitgaven={extraUitgaven.filter((u) => u.overslaanbaar)}
           huidigWatOverblijft={watOverblijftHuidigeMaand}
           onToepassen={acties.pasWatAlsToe}
         />
@@ -293,6 +361,8 @@ export function DashboardClient({
           <GevarenZone onWissen={acties.wisData} />
         </ScrollReveal>
       )}
+
+      <ExtraKostWidget rol={rol} onVoegToe={voegExtraKostToe} onMaakOngedaan={maakExtraKostOngedaan} />
     </div>
   );
 }
