@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { PiggyBank, Mail } from "lucide-react";
 import { startNieuwHousehold } from "./actions";
+import { importeerGastData } from "@/app/gezin/actions";
+import { heeftGastData, leesGastData, wisGastData } from "@/lib/guest/store";
+import { bouwGastImportPayload } from "@/lib/guest/import";
 
 export function StartHouseholdForm() {
   const [naam, setNaam] = useState("");
@@ -14,7 +17,21 @@ export function StartHouseholdForm() {
     const waarde = String(formData.get("naam") ?? "").trim();
     startTransition(async () => {
       const res = await startNieuwHousehold(waarde);
-      if (!res.gelukt) setFout(res.foutmelding ?? "Kon niet opslaan.");
+      if (!res.gelukt) {
+        setFout(res.foutmelding ?? "Kon niet opslaan.");
+        return;
+      }
+
+      // Had je al gegevens ingevuld in gast-modus (zonder account)? Zet
+      // die dan nu over naar je zonet aangemaakte huishouden — enkel de
+      // lokale kopie wissen als dat écht gelukt is, anders raak je niets
+      // kwijt en kan je het later gewoon opnieuw proberen.
+      if (heeftGastData()) {
+        const importResultaat = await importeerGastData(bouwGastImportPayload(leesGastData()));
+        if (importResultaat.gelukt) wisGastData();
+      }
+
+      window.location.href = "/dashboard";
     });
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { registreerNieuweMaand } from "@/app/(dashboard)/dashboard/actions";
+import type { RegistreerMaandActie } from "@/types/dashboard-acties";
 
 /**
  * Wordt getoond als je naar een maand navigeert die nog niet
@@ -10,16 +10,24 @@ import { registreerNieuweMaand } from "@/app/(dashboard)/dashboard/actions";
  * transitie, om elke kans op een verouderde, gecachete weergave van
  * die nieuwe maand uit te sluiten.
  */
-export function RegistreerMaandGate({ maand }: { maand: string }) {
+export function RegistreerMaandGate({
+  maand,
+  onRegistreerMaand,
+  basisPad = "/dashboard",
+}: {
+  maand: string;
+  onRegistreerMaand: RegistreerMaandActie;
+  basisPad?: string;
+}) {
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function registreer() {
     setFout(null);
     startTransition(async () => {
-      const res = await registreerNieuweMaand(maand, null);
+      const res = await onRegistreerMaand(maand, null);
       if (res.gelukt) {
-        window.location.href = `/dashboard/${maand}`;
+        window.location.href = `${basisPad}/${maand}`;
       } else {
         setFout(res.foutmelding ?? "Kon niet registreren.");
       }

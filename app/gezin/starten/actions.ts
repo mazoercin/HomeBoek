@@ -1,11 +1,15 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { maakServerClient } from "@/lib/supabase/server";
 import { requireSessie } from "@/lib/auth/require-role";
 import { logger } from "@/lib/logger.server";
 
-/** Maakt een nieuw huishouden aan met de huidige gebruiker als owner (atomische RPC), en stuurt door naar het dashboard. */
+/**
+ * Maakt een nieuw huishouden aan met de huidige gebruiker als owner
+ * (atomische RPC). Stuurt bewust NIET zelf door: de aanroeper (client)
+ * moet eerst nog de kans krijgen om eventuele lokale gast-data te
+ * importeren vóór de navigatie naar /dashboard — zie StartHouseholdForm.
+ */
 export async function startNieuwHousehold(naam: string): Promise<{ gelukt: boolean; foutmelding?: string }> {
   const sessie = await requireSessie();
   const supabase = maakServerClient();
@@ -23,5 +27,5 @@ export async function startNieuwHousehold(naam: string): Promise<{ gelukt: boole
     return { gelukt: false, foutmelding: "Kon geen huishouden aanmaken, probeer opnieuw." };
   }
 
-  redirect("/dashboard");
+  return { gelukt: true };
 }

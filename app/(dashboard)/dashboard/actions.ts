@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import { vereisHousehold } from "@/lib/auth/household";
-import type { Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
+import type { InkomenBron, InkomenFrequentie } from "@/types/database";
+import type { KostInvoer } from "@/types/dashboard-acties";
 
 function opnieuwValideren() {
   revalidatePath("/dashboard/[maand]", "page");
@@ -78,15 +79,6 @@ export async function pasWatAlsToe(extraUitgaveIds: string[]) {
 }
 
 // ---------- Vaste kosten / facturen CRUD ----------
-
-interface KostInvoer {
-  label: string;
-  bedrag: number;
-  categorie: Categorie;
-  icoon: string;
-  vervaldag: number | null;
-  eind_datum: string | null;
-}
 
 export async function voegVasteKostToe(data: KostInvoer, maand: string) {
   const context = await vereisHousehold();

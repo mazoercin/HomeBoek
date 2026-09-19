@@ -5,11 +5,16 @@ import { ChevronLeft, ChevronRight, CalendarPlus, CalendarDays, RotateCcw } from
 import { formatteerMaandNaam, maandSleutel } from "@/lib/calculations/maand";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 import { Switch } from "@/components/ui/Switch";
-import { registreerNieuweMaand } from "@/app/(dashboard)/dashboard/actions";
+import type { RegistreerMaandActie } from "@/types/dashboard-acties";
 
 interface Props {
   huidigeMaand: string;
   alleMaanden: string[]; // oplopend gesorteerd
+  onRegistreerMaand: RegistreerMaandActie;
+  /** "/dashboard" voor ingelogde gebruikers, "/gast" in gast-modus. */
+  basisPad?: string;
+  /** Het jaaroverzicht bestaat enkel voor ingelogde huishoudens (multi-maand data uit Supabase). */
+  toonOverzicht?: boolean;
 }
 
 /**
@@ -25,7 +30,13 @@ interface Props {
  * verouderde versie van de doelpagina te tonen. Een echte page-load
  * slaat die cache helemaal over.
  */
-export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
+export function MaandKop({
+  huidigeMaand,
+  alleMaanden,
+  onRegistreerMaand,
+  basisPad = "/dashboard",
+  toonOverzicht = true,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [nieuweMaand, setNieuweMaand] = useState(huidigeMaand);
@@ -54,9 +65,9 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
       return;
     }
     startTransition(async () => {
-      const res = await registreerNieuweMaand(nieuweMaand, kopieren ? huidigeMaand : null);
+      const res = await onRegistreerMaand(nieuweMaand, kopieren ? huidigeMaand : null);
       if (res.gelukt) {
-        window.location.href = `/dashboard/${nieuweMaand}`;
+        window.location.href = `${basisPad}/${nieuweMaand}`;
       } else {
         setFout(res.foutmelding ?? "Kon niet opslaan.");
       }
@@ -68,7 +79,7 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
           <a
-            href={vorige ? `/dashboard/${vorige}` : undefined}
+            href={vorige ? `${basisPad}/${vorige}` : undefined}
             aria-disabled={!vorige}
             className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full transition ${
               vorige
@@ -82,7 +93,7 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
             {formatteerMaandNaam(huidigeMaand)}
           </h2>
           <a
-            href={volgende ? `/dashboard/${volgende}` : undefined}
+            href={volgende ? `${basisPad}/${volgende}` : undefined}
             aria-disabled={!volgende}
             className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full transition ${
               volgende
@@ -97,18 +108,20 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {vandaag && vandaag !== huidigeMaand && (
             <a
-              href={`/dashboard/${vandaag}`}
+              href={`${basisPad}/${vandaag}`}
               className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5 whitespace-nowrap flex-1 sm:flex-none justify-center"
             >
               <RotateCcw size={16} strokeWidth={2.25} className="shrink-0" /> Naar huidige maand
             </a>
           )}
-          <a
-            href="/overzicht"
-            className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5 whitespace-nowrap flex-1 sm:flex-none justify-center"
-          >
-            <CalendarDays size={16} strokeWidth={2.25} className="shrink-0" /> Overzicht
-          </a>
+          {toonOverzicht && (
+            <a
+              href="/overzicht"
+              className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5 whitespace-nowrap flex-1 sm:flex-none justify-center"
+            >
+              <CalendarDays size={16} strokeWidth={2.25} className="shrink-0" /> Overzicht
+            </a>
+          )}
           <button
             type="button"
             className="knop-primair !min-h-[38px] !px-4 !text-sm gap-1.5 whitespace-nowrap flex-1 sm:flex-none justify-center basis-full sm:basis-auto"

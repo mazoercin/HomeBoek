@@ -4,6 +4,57 @@ import { haalGeregistreerdeMaanden } from "@/lib/data/maanden";
 import { vereisHousehold } from "@/lib/auth/household";
 import { RegistreerMaandGate } from "@/components/dashboard/RegistreerMaandGate";
 import { DashboardClient } from "../DashboardClient";
+import {
+  zetVasteKostBetaald,
+  zetFactuurBetaald,
+  zetExtraUitgaveGeskipt,
+  pasWatAlsToe,
+  voegVasteKostToe,
+  verwijderVasteKost,
+  voegFactuurToe,
+  verwijderFactuur,
+  voegExtraUitgaveToe,
+  verwijderExtraUitgave,
+  voegDoelToe,
+  verwijderDoel,
+  zetDoelGepauzeerd,
+  herschikDoelen,
+  voegDoelBijdrageToe,
+  voegInvesteringToe,
+  voegInvesteringTransactieToe,
+  hernoemInvestering,
+  verwijderInvestering,
+  voegInkomenToe,
+  verwijderInkomen,
+  registreerNieuweMaand,
+} from "../actions";
+import { wisHouseholdData } from "@/app/gezin/actions";
+import type { DashboardActies } from "@/types/dashboard-acties";
+
+const ECHTE_ACTIES: DashboardActies = {
+  zetVasteKostBetaald,
+  zetFactuurBetaald,
+  zetExtraUitgaveGeskipt,
+  pasWatAlsToe,
+  voegVasteKostToe,
+  verwijderVasteKost,
+  voegFactuurToe,
+  verwijderFactuur,
+  voegExtraUitgaveToe,
+  verwijderExtraUitgave,
+  voegDoelToe,
+  verwijderDoel,
+  zetDoelGepauzeerd,
+  herschikDoelen,
+  voegDoelBijdrageToe,
+  voegInvesteringToe,
+  voegInvesteringTransactieToe,
+  hernoemInvestering,
+  verwijderInvestering,
+  voegInkomenToe,
+  verwijderInkomen,
+  wisData: wisHouseholdData,
+};
 
 const MAAND_PATROON = /^\d{4}-\d{2}$/;
 
@@ -39,7 +90,7 @@ export default async function DashboardMaandPagina({ params }: { params: { maand
   const isGeregistreerd = alleMaanden.includes(maand);
 
   if (!isGeregistreerd) {
-    return <RegistreerMaandGate maand={maand} />;
+    return <RegistreerMaandGate maand={maand} onRegistreerMaand={registreerNieuweMaand} />;
   }
 
   return (
@@ -49,6 +100,8 @@ export default async function DashboardMaandPagina({ params }: { params: { maand
       householdNaam={context.householdNaam}
       rol={context.rol}
       alleMaanden={alleMaanden}
+      acties={ECHTE_ACTIES}
+      onRegistreerMaand={registreerNieuweMaand}
     />
   );
 }

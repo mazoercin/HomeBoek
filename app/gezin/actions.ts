@@ -9,7 +9,7 @@ import { genereerUitnodigingsToken, hashUitnodigingsToken } from "@/lib/auth/uit
 import { haalIpHash, magDoor, registreerPoging } from "@/lib/auth/rate-limit";
 import { wisUitnodigingToken } from "@/lib/auth/uitnodiging-cookie";
 import { logger } from "@/lib/logger.server";
-import type { HouseholdRol } from "@/types/database";
+import type { HouseholdRol, Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
 
 function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "https://home-boek.vercel.app";
@@ -277,4 +277,157 @@ export async function wisHouseholdData(): Promise<{ gelukt: boolean; foutmelding
   revalidatePath("/dashboard/[maand]", "page");
   revalidatePath("/overzicht");
   return { gelukt: true };
+}
+
+// ---------- Gast-data importeren ----------
+
+export interface GastImportPayload {
+  maanden: Record<
+    string,
+    {
+      inkomen: { bron: InkomenBron; label: string; bedrag: number; frequentie: InkomenFrequentie }[];
+      vasteKosten: {
+        label: string;
+        bedrag: number;
+        categorie: Categorie;
+        icoon: string;
+        vervaldag: number | null;
+        eind_datum: string | null;
+        betaald: boolean;
+      }[];
+      facturen: {
+        label: string;
+        bedrag: number;
+        categorie: Categorie;
+        icoon: string;
+        vervaldag: number | null;
+        eind_datum: string | null;
+        betaald: boolean;
+      }[];
+      extraUitgaven: { label: string; bedrag: number; overslaanbaar: boolean; geskipt: boolean }[];
+    }
+  >;
+  doelen: { id: string; naam: string; target_bedrag: number; maandelijks_bedrag: number; prioriteit: number; gepauzeerd: boolean }[];
+  doelBijdragen: { doel_id: string; bedrag: number; datum: string; notitie: string | null; aftrekken_van_inkomen: boolean }[];
+  investeringen: { id: string; naam: string }[];
+  investeringTransacties: { investering_id: string; bedrag: number; datum: string; notitie: string | null }[];
+}
+
+/**
+ * Zet gast-data (lokaal in de browser opgebouwd, zonder account) om naar
+ * échte rijen in het zonet aangemaakte huishouden van de nieuwe eigenaar.
+ * Doelen/investeringen krijgen hier een nieuw, database-gegenereerd id —
+ * hun oude (client-side) id diende enkel om doel_bijdragen/investering_
+ * transacties aan het juiste doel/investering te blijven koppelen.
+ * Best-effort: mislukt dit, dan blijft het huishouden gewoon leeg (de
+ * gebruiker verliest zijn account niet) — de aanroeper wist de lokale
+ * gast-data pas als dit `gelukt: true` teruggeeft.
+ */
+export async function importeerGastData(payload: GastImportPayload): Promise<{ gelukt: boolean; foutmelding?: string }> {
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
+
+  try {
+    const maanden = Object.keys(payload.maanden);
+    if (maanden.length > 0) {
+      const { error } = await supabase
+        .from("dashboard_maanden")
+        .upsert(
+          maanden.map((maand) => ({ household_id: context.householdId, maand })),
+          { onConflict: "household_id,maand" }
+        );
+      if (error) throw error;
+    }
+
+    for (const [maand, m] of Object.entries(payload.maanden)) {
+      if (m.inkomen.length > 0) {
+        const { error } = await supabase
+          .from("inkomen")
+          .insert(m.inkomen.map((i) => ({ ...i, maand, household_id: context.householdId })));
+        if (error) throw error;
+      }
+      if (m.vasteKosten.length > 0) {
+        const { error } = await supabase
+          .from("vaste_kosten")
+          .insert(m.vasteKosten.map((k) => ({ ...k, maand, household_id: context.householdId })));
+        if (error) throw error;
+      }
+      if (m.facturen.length > 0) {
+        const { error } = await supabase
+          .from("facturen")
+          .insert(m.facturen.map((f) => ({ ...f, maand, household_id: context.householdId })));
+        if (error) throw error;
+      }
+      if (m.extraUitgaven.length > 0) {
+        const { error } = await supabase
+          .from("extra_uitgaven")
+          .insert(m.extraUitgaven.map((u) => ({ ...u, maand, household_id: context.householdId })));
+        if (error) throw error;
+      }
+    }
+
+    const doelIdMap = new Map<string, string>();
+    for (const doel of payload.doelen) {
+      const { data, error } = await supabase
+        .from("doelen")
+        .insert({
+          naam: doel.naam,
+          target_bedrag: doel.target_bedrag,
+          maandelijks_bedrag: doel.maandelijks_bedrag,
+          prioriteit: doel.prioriteit,
+          gepauzeerd: doel.gepauzeerd,
+          household_id: context.householdId,
+        })
+        .select("id")
+        .single();
+      if (error || !data) throw error ?? new Error("Geen id teruggekregen bij het aanmaken van een doel.");
+      doelIdMap.set(doel.id, data.id as string);
+    }
+    for (const bijdrage of payload.doelBijdragen) {
+      const nieuwDoelId = doelIdMap.get(bijdrage.doel_id);
+      if (!nieuwDoelId) continue;
+      const { error } = await supabase.from("doel_bijdragen").insert({
+        doel_id: nieuwDoelId,
+        bedrag: bijdrage.bedrag,
+        datum: bijdrage.datum,
+        notitie: bijdrage.notitie,
+        aftrekken_van_inkomen: bijdrage.aftrekken_van_inkomen,
+        household_id: context.householdId,
+      });
+      if (error) throw error;
+    }
+
+    const investeringIdMap = new Map<string, string>();
+    for (const investering of payload.investeringen) {
+      const { data, error } = await supabase
+        .from("investeringen")
+        .insert({ naam: investering.naam, household_id: context.householdId })
+        .select("id")
+        .single();
+      if (error || !data) throw error ?? new Error("Geen id teruggekregen bij het aanmaken van een investering.");
+      investeringIdMap.set(investering.id, data.id as string);
+    }
+    for (const transactie of payload.investeringTransacties) {
+      const nieuwInvesteringId = investeringIdMap.get(transactie.investering_id);
+      if (!nieuwInvesteringId) continue;
+      const { error } = await supabase.from("investering_transacties").insert({
+        investering_id: nieuwInvesteringId,
+        bedrag: transactie.bedrag,
+        datum: transactie.datum,
+        notitie: transactie.notitie,
+        household_id: context.householdId,
+      });
+      if (error) throw error;
+    }
+
+    revalidatePath("/dashboard/[maand]", "page");
+    return { gelukt: true };
+  } catch (error) {
+    logger.error({
+      code: "DB_001",
+      message: "Kon gast-data niet importeren naar nieuw huishouden",
+      context: { householdId: context.householdId, error: error instanceof Error ? error.message : String(error) },
+    });
+    return { gelukt: false, foutmelding: "Kon je gegevens niet overzetten." };
+  }
 }

@@ -25,30 +25,7 @@ import { GrafiekenSectie } from "@/components/dashboard/GrafiekenSectie";
 import { GevarenZone } from "@/components/dashboard/GevarenZone";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import type { HouseholdRol } from "@/types/database";
-import {
-  zetVasteKostBetaald,
-  zetFactuurBetaald,
-  zetExtraUitgaveGeskipt,
-  pasWatAlsToe,
-  voegVasteKostToe,
-  verwijderVasteKost,
-  voegFactuurToe,
-  verwijderFactuur,
-  voegExtraUitgaveToe,
-  verwijderExtraUitgave,
-  voegDoelToe,
-  verwijderDoel,
-  zetDoelGepauzeerd,
-  herschikDoelen,
-  voegDoelBijdrageToe,
-  voegInvesteringToe,
-  voegInvesteringTransactieToe,
-  hernoemInvestering,
-  verwijderInvestering,
-  voegInkomenToe,
-  verwijderInkomen,
-} from "./actions";
-import { wisHouseholdData } from "@/app/gezin/actions";
+import type { DashboardActies, RegistreerMaandActie } from "@/types/dashboard-acties";
 
 export function DashboardClient({
   data,
@@ -56,12 +33,21 @@ export function DashboardClient({
   householdNaam,
   rol,
   alleMaanden,
+  acties,
+  onRegistreerMaand,
+  basisPad = "/dashboard",
+  toonOverzicht = true,
 }: {
   data: DashboardData;
   huidigeMaand: string;
   householdNaam: string;
   rol: HouseholdRol;
   alleMaanden: string[];
+  /** Of dit écht naar Supabase schrijft of enkel lokaal (gast-modus) — zie types/dashboard-acties.ts. */
+  acties: DashboardActies;
+  onRegistreerMaand: RegistreerMaandActie;
+  basisPad?: string;
+  toonOverzicht?: boolean;
 }) {
   const [periode, setPeriode] = useState<Periode>(1);
 
@@ -148,7 +134,13 @@ export function DashboardClient({
       </div>
 
       <ScrollReveal>
-        <MaandKop huidigeMaand={huidigeMaand} alleMaanden={alleMaanden} />
+        <MaandKop
+          huidigeMaand={huidigeMaand}
+          alleMaanden={alleMaanden}
+          onRegistreerMaand={onRegistreerMaand}
+          basisPad={basisPad}
+          toonOverzicht={toonOverzicht}
+        />
       </ScrollReveal>
 
       <PeriodeSelector waarde={periode} onWijzig={setPeriode} />
@@ -196,17 +188,17 @@ export function DashboardClient({
           inkomen={data.inkomen}
           vasteKosten={data.vasteKosten}
           extraUitgaven={data.extraUitgaven}
-          onInkomenToevoegen={(d) => voegInkomenToe(d, huidigeMaand)}
-          onVasteKostToevoegen={(d) => voegVasteKostToe(d, huidigeMaand)}
-          onExtraUitgaveToevoegen={(d) => voegExtraUitgaveToe(d, huidigeMaand)}
+          onInkomenToevoegen={(d) => acties.voegInkomenToe(d, huidigeMaand)}
+          onVasteKostToevoegen={(d) => acties.voegVasteKostToe(d, huidigeMaand)}
+          onExtraUitgaveToevoegen={(d) => acties.voegExtraUitgaveToe(d, huidigeMaand)}
         />
       </ScrollReveal>
 
       <ScrollReveal>
         <InkomenSectie
           items={data.inkomen}
-          onToevoegen={(d) => voegInkomenToe(d, huidigeMaand)}
-          onVerwijderen={verwijderInkomen}
+          onToevoegen={(d) => acties.voegInkomenToe(d, huidigeMaand)}
+          onVerwijderen={acties.verwijderInkomen}
         />
       </ScrollReveal>
 
@@ -222,9 +214,9 @@ export function DashboardClient({
               voorbeeld: "Huur — €1750,00",
             }}
             items={data.vasteKosten}
-            onZetBetaald={zetVasteKostBetaald}
-            onToevoegen={(d) => voegVasteKostToe(d, huidigeMaand)}
-            onVerwijderen={verwijderVasteKost}
+            onZetBetaald={acties.zetVasteKostBetaald}
+            onToevoegen={(d) => acties.voegVasteKostToe(d, huidigeMaand)}
+            onVerwijderen={acties.verwijderVasteKost}
           />
         </ScrollReveal>
         <ScrollReveal vertraging={80}>
@@ -238,17 +230,17 @@ export function DashboardClient({
               voorbeeld: "Elektriciteit — €120,00",
             }}
             items={data.facturen}
-            onZetBetaald={zetFactuurBetaald}
-            onToevoegen={(d) => voegFactuurToe(d, huidigeMaand)}
-            onVerwijderen={verwijderFactuur}
+            onZetBetaald={acties.zetFactuurBetaald}
+            onToevoegen={(d) => acties.voegFactuurToe(d, huidigeMaand)}
+            onVerwijderen={acties.verwijderFactuur}
           />
         </ScrollReveal>
         <ScrollReveal vertraging={160}>
           <ExtraUitgavenKader
             items={data.extraUitgaven}
-            onToevoegen={(d) => voegExtraUitgaveToe(d, huidigeMaand)}
-            onVerwijderen={verwijderExtraUitgave}
-            onZetGeskipt={zetExtraUitgaveGeskipt}
+            onToevoegen={(d) => acties.voegExtraUitgaveToe(d, huidigeMaand)}
+            onVerwijderen={acties.verwijderExtraUitgave}
+            onZetGeskipt={acties.zetExtraUitgaveGeskipt}
           />
         </ScrollReveal>
       </div>
@@ -257,7 +249,7 @@ export function DashboardClient({
         <WatAlsKader
           overslaanbareUitgaven={data.extraUitgaven.filter((u) => u.overslaanbaar)}
           huidigWatOverblijft={watOverblijftHuidigeMaand}
-          onToepassen={pasWatAlsToe}
+          onToepassen={acties.pasWatAlsToe}
         />
       </ScrollReveal>
 
@@ -267,34 +259,38 @@ export function DashboardClient({
             doelen={data.doelen}
             bijdragen={data.doelBijdragen}
             huidigeMaand={huidigeMaand}
-            onToevoegen={voegDoelToe}
-            onVerwijderen={verwijderDoel}
-            onPauzeren={zetDoelGepauzeerd}
-            onHerschikken={herschikDoelen}
-            onBijdrageToevoegen={voegDoelBijdrageToe}
+            onToevoegen={acties.voegDoelToe}
+            onVerwijderen={acties.verwijderDoel}
+            onPauzeren={acties.zetDoelGepauzeerd}
+            onHerschikken={acties.herschikDoelen}
+            onBijdrageToevoegen={acties.voegDoelBijdrageToe}
           />
         </ScrollReveal>
         <ScrollReveal vertraging={80}>
           <InvesteringenSectie
             investeringen={data.investeringen}
             transacties={data.investeringTransacties}
-            onInvesteringToevoegen={voegInvesteringToe}
-            onTransactieToevoegen={voegInvesteringTransactieToe}
-            onHernoemen={hernoemInvestering}
-            onVerwijderen={verwijderInvestering}
+            onInvesteringToevoegen={acties.voegInvesteringToe}
+            onTransactieToevoegen={acties.voegInvesteringTransactieToe}
+            onHernoemen={acties.hernoemInvestering}
+            onVerwijderen={acties.verwijderInvestering}
           />
         </ScrollReveal>
       </div>
 
       {watOverblijftHuidigeMaand < 0 && (
         <ScrollReveal>
-          <VoorstellenSectie voorstellen={voorstellen} onSkipToepassen={pasWatAlsToe} onDoelPauzeren={zetDoelGepauzeerd} />
+          <VoorstellenSectie
+            voorstellen={voorstellen}
+            onSkipToepassen={acties.pasWatAlsToe}
+            onDoelPauzeren={acties.zetDoelGepauzeerd}
+          />
         </ScrollReveal>
       )}
 
       {rol === "owner" && (
         <ScrollReveal>
-          <GevarenZone onWissen={wisHouseholdData} />
+          <GevarenZone onWissen={acties.wisData} />
         </ScrollReveal>
       )}
     </div>
