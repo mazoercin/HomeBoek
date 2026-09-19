@@ -7,7 +7,7 @@ import { logger } from "@/lib/logger.server";
 
 /** Maakt een nieuw huishouden aan met de huidige gebruiker als owner (atomische RPC), en stuurt door naar het dashboard. */
 export async function startNieuwHousehold(naam: string): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  const sessie = requireSessie();
+  const sessie = await requireSessie();
   const supabase = maakServerClient();
 
   const naamGetrimd = naam.trim() || "Ons gezin";

@@ -29,7 +29,7 @@ export interface HouseholdContext {
  * zonder uitnodiging), dan sturen we door naar de onboardingpagina.
  */
 export async function vereisHousehold(): Promise<HouseholdContext> {
-  const sessie = requireSessie();
+  const sessie = await requireSessie();
   const supabase = maakServerClient();
 
   const { data, error } = await supabase

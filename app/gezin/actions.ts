@@ -124,7 +124,7 @@ export async function bekijkUitnodiging(
 export async function accepteerUitnodiging(
   token: string
 ): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  const sessie = requireSessie();
+  const sessie = await requireSessie();
   const ipHash = haalIpHash();
 
   if (!(await magDoor("accept", ipHash, sessie.gebruikerId))) {

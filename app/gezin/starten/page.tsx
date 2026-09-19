@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { requireSessie } from "@/lib/auth/require-role";
 import { maakServerClient } from "@/lib/supabase/server";
+import { uitloggen } from "@/app/(dashboard)/logout-action";
 import { StartHouseholdForm } from "./StartHouseholdForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function StartHouseholdPagina() {
-  const sessie = requireSessie();
+  const sessie = await requireSessie();
   const supabase = maakServerClient();
 
   // Al lid van een huishouden? Dan hoort deze pagina niet meer getoond
@@ -30,6 +31,12 @@ export default async function StartHouseholdPagina() {
           <p className="text-tekst-secundair mt-1">Hoe wil je beginnen?</p>
         </div>
         <StartHouseholdForm />
+
+        <form action={uitloggen} className="text-center mt-6">
+          <button type="submit" className="text-sm font-semibold text-tekst-secundair hover:text-tekst-primair">
+            Niet {sessie.gebruikersnaam}? Uitloggen
+          </button>
+        </form>
       </div>
     </main>
   );
