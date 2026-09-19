@@ -12,39 +12,44 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus, Pause, Play, Target } from "lucide-react";
-import type { Doel } from "@/types/database";
-import { berekenDoelProjectie, berekenReedsGespaard } from "@/lib/calculations/doelen";
+import { GripVertical, Trash2, Plus, Pause, Play, Target, PiggyBank } from "lucide-react";
+import type { Doel, DoelBijdrage } from "@/types/database";
+import { berekenDoelProjectie } from "@/lib/calculations/doelen";
 import { StapTip } from "@/components/ui/StapTip";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
+type ActieResultaat = Promise<{ gelukt: boolean; foutmelding?: string }>;
+
 interface Props {
   doelen: Doel[];
+  bijdragen: DoelBijdrage[];
   huidigeMaand: string;
   onToevoegen: (data: {
     naam: string;
     target_bedrag: number;
     maandelijks_bedrag: number;
     prioriteit: number;
-  }) => Promise<{ gelukt: boolean; foutmelding?: string }>;
-  onVerwijderen: (id: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
-  onPauzeren: (id: string, gepauzeerd: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
-  onHerschikken: (doelIdsInNieuweVolgorde: string[]) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  }) => ActieResultaat;
+  onVerwijderen: (id: string) => ActieResultaat;
+  onPauzeren: (id: string, gepauzeerd: boolean) => ActieResultaat;
+  onHerschikken: (doelIdsInNieuweVolgorde: string[]) => ActieResultaat;
+  onBijdrageToevoegen: (data: { doel_id: string; bedrag: number; datum: string; notitie: string | null }) => ActieResultaat;
 }
 
-/** Doelen zijn goud-vrij hier — goud krijgt zijn eigen sectie/kleur op het dashboard. */
+/** Doelen zijn goud-vrij hier — investeringen krijgen hun eigen sectie op het dashboard. */
 export function DoelenSectie({
   doelen,
+  bijdragen,
   huidigeMaand,
   onToevoegen,
   onVerwijderen,
   onPauzeren,
   onHerschikken,
+  onBijdrageToevoegen,
 }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const vandaag = new Date();
 
   // We bewaren lokaal enkel de VOLGORDE van id's (voor instante sleep-feedback);
   // de eigenlijke doel-data komt telkens vers uit `doelen`, zodat een pauzeer-
@@ -135,7 +140,8 @@ export function DoelenSectie({
         <SortableContext items={volgorde.map((d) => d.id)} strategy={verticalListSortingStrategy}>
           <ul className="space-y-3 mb-4">
             {volgorde.map((doel) => {
-              const reedsGespaard = berekenReedsGespaard(doel, vandaag);
+              const bijdragenVoorDoel = bijdragen.filter((b) => b.doel_id === doel.id);
+              const reedsGespaard = doel.gepauzeerd ? 0 : bijdragenVoorDoel.reduce((s, b) => s + b.bedrag, 0);
               const voortgang = Math.min(100, Math.round((reedsGespaard / doel.target_bedrag) * 100));
               const projectie = berekenDoelProjectie(doel, reedsGespaard, huidigeMaand);
 
@@ -149,6 +155,7 @@ export function DoelenSectie({
                   isPending={isPending}
                   onPauzeren={onPauzeren}
                   onVerwijderen={onVerwijderen}
+                  onBijdrageToevoegen={onBijdrageToevoegen}
                   startTransition={startTransition}
                 />
               );
@@ -199,6 +206,7 @@ interface DoelRijProps {
   isPending: boolean;
   onPauzeren: Props["onPauzeren"];
   onVerwijderen: Props["onVerwijderen"];
+  onBijdrageToevoegen: Props["onBijdrageToevoegen"];
   startTransition: React.TransitionStartFunction;
 }
 
@@ -210,15 +218,37 @@ function DoelRij({
   isPending,
   onPauzeren,
   onVerwijderen,
+  onBijdrageToevoegen,
   startTransition,
 }: DoelRijProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: doel.id });
+  const [stortingOpen, setStortingOpen] = useState(false);
+  const [stortingFout, setStortingFout] = useState<string | null>(null);
 
   const stijl = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
   };
+
+  function submitStorting(formData: FormData) {
+    setStortingFout(null);
+    const bedrag = Number(formData.get("bedrag"));
+    if (!Number.isFinite(bedrag) || bedrag <= 0) {
+      setStortingFout("Bedrag moet een positief getal zijn.");
+      return;
+    }
+    startTransition(async () => {
+      const res = await onBijdrageToevoegen({
+        doel_id: doel.id,
+        bedrag,
+        datum: new Date().toISOString().slice(0, 10),
+        notitie: null,
+      });
+      if (res.gelukt) setStortingOpen(false);
+      else setStortingFout(res.foutmelding ?? "Kon niet opslaan.");
+    });
+  }
 
   return (
     <li ref={setNodeRef} style={stijl} className="rounded-xl border border-rand/70 p-3 bg-white">
@@ -263,7 +293,35 @@ function DoelRij({
               : `Bereikt over ${projectie.maanden} maand${projectie.maanden === 1 ? "" : "en"} (${projectie.datum})`}
       </p>
 
+      <Uitklapbaar open={stortingOpen}>
+        <form action={submitStorting} className="flex gap-1.5 pt-2">
+          <input
+            name="bedrag"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0.01"
+            placeholder="Bedrag (€)"
+            className="veld-input !min-h-[36px] text-sm flex-1"
+            required
+            autoFocus
+          />
+          <button type="submit" className="knop-primair !min-h-[36px] !px-4 !text-sm" disabled={isPending}>
+            OK
+          </button>
+        </form>
+        {stortingFout && <p className="veld-fout !mt-1 !text-xs">{stortingFout}</p>}
+      </Uitklapbaar>
+
       <div className="flex gap-2 mt-3">
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => setStortingOpen((v) => !v)}
+          className="knop-secundair min-h-[34px] px-3 text-xs gap-1.5"
+        >
+          <PiggyBank size={13} strokeWidth={2.5} /> Storting
+        </button>
         <button
           type="button"
           disabled={isPending}
@@ -287,7 +345,7 @@ function DoelRij({
               });
             }
           }}
-          className="min-h-[34px] px-3 text-xs flex items-center gap-1.5 text-tekst-secundair hover:text-tekort transition rounded-full"
+          className="min-h-[34px] px-3 text-xs flex items-center gap-1.5 text-tekst-secundair hover:text-tekort transition rounded-full ml-auto"
         >
           <Trash2 size={13} strokeWidth={2.5} /> Verwijderen
         </button>

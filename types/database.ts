@@ -131,8 +131,24 @@ export interface Doel {
   updated_at: string;
 }
 
-export interface GoudTransactie {
+export interface Investering {
   id: string;
+  naam: string;
+  created_at: string;
+}
+
+export interface InvesteringTransactie {
+  id: string;
+  investering_id: string;
+  bedrag: number;
+  datum: string; // YYYY-MM-DD
+  notitie: string | null;
+  created_at: string;
+}
+
+export interface DoelBijdrage {
+  id: string;
+  doel_id: string;
   bedrag: number;
   datum: string; // YYYY-MM-DD
   notitie: string | null;

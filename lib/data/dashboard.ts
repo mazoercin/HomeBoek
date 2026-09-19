@@ -11,7 +11,9 @@ import type {
   ExtraUitgave,
   GeskipteUitgave,
   Doel,
-  GoudTransactie,
+  DoelBijdrage,
+  Investering,
+  InvesteringTransactie,
 } from "@/types/database";
 
 export interface DashboardData {
@@ -25,7 +27,9 @@ export interface DashboardData {
   extraUitgaven: ExtraUitgave[];
   geskipteUitgaven: GeskipteUitgave[];
   doelen: Doel[];
-  goudTransacties: GoudTransactie[];
+  doelBijdragen: DoelBijdrage[];
+  investeringen: Investering[];
+  investeringTransacties: InvesteringTransactie[];
   fout: boolean;
 }
 
@@ -40,7 +44,9 @@ const LEEG: DashboardData = {
   extraUitgaven: [],
   geskipteUitgaven: [],
   doelen: [],
-  goudTransacties: [],
+  doelBijdragen: [],
+  investeringen: [],
+  investeringTransacties: [],
   fout: false,
 };
 
@@ -65,7 +71,9 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       extraUitgaven,
       geskipteUitgaven,
       doelen,
-      goudTransacties,
+      doelBijdragen,
+      investeringen,
+      investeringTransacties,
     ] = await Promise.all([
       supabase.from("vast_inkomen").select("*").order("created_at"),
       supabase.from("flexibel_inkomen").select("*").order("created_at"),
@@ -77,7 +85,9 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       supabase.from("extra_uitgaven").select("*").order("created_at"),
       supabase.from("geskipte_uitgaven").select("*").eq("maand", maand),
       supabase.from("doelen").select("*").order("prioriteit"),
-      supabase.from("goud_transacties").select("*").order("datum", { ascending: false }),
+      supabase.from("doel_bijdragen").select("*").order("datum", { ascending: false }),
+      supabase.from("investeringen").select("*").order("created_at"),
+      supabase.from("investering_transacties").select("*").order("datum", { ascending: false }),
     ]);
 
     const alleResultaten = [
@@ -91,7 +101,9 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       extraUitgaven,
       geskipteUitgaven,
       doelen,
-      goudTransacties,
+      doelBijdragen,
+      investeringen,
+      investeringTransacties,
     ];
 
     const eersteFout = alleResultaten.find((r) => r.error);
@@ -115,7 +127,9 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       extraUitgaven: extraUitgaven.data ?? [],
       geskipteUitgaven: geskipteUitgaven.data ?? [],
       doelen: doelen.data ?? [],
-      goudTransacties: goudTransacties.data ?? [],
+      doelBijdragen: doelBijdragen.data ?? [],
+      investeringen: investeringen.data ?? [],
+      investeringTransacties: investeringTransacties.data ?? [],
       fout: false,
     };
   } catch (error) {

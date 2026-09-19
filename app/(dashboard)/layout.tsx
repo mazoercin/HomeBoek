@@ -5,7 +5,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sessie = requireSessie();
 
   return (
-    <div className="min-h-screen pb-24 md:pb-0">
+    <div className="min-h-screen">
       <NavigatieBalk rol={sessie.rol} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 lg:py-10">{children}</div>
     </div>

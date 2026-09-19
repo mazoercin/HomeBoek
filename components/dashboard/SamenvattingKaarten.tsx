@@ -4,10 +4,20 @@ interface Props {
   totaalInkomen: number;
   openstaandBedrag: number;
   watOverblijft: number;
+  /** Van de vaste kosten + facturen van deze maand: hoeveel staat al op "betaald". */
+  betaaldHuidigeMaand: number;
+  /** Van de vaste kosten + facturen van deze maand: hoeveel staat nog op "onbetaald". */
+  nogTeBetalenHuidigeMaand: number;
 }
 
 /** Rij 1: de drie kernkaarten — inkomen, openstaand, en wat overblijft (groen/rood). */
-export function SamenvattingKaarten({ totaalInkomen, openstaandBedrag, watOverblijft }: Props) {
+export function SamenvattingKaarten({
+  totaalInkomen,
+  openstaandBedrag,
+  watOverblijft,
+  betaaldHuidigeMaand,
+  nogTeBetalenHuidigeMaand,
+}: Props) {
   const positief = watOverblijft >= 0;
 
   return (
@@ -39,10 +49,19 @@ export function SamenvattingKaarten({ totaalInkomen, openstaandBedrag, watOverbl
         <p className="text-3xl font-extrabold text-tekst-primair tabular-nums tracking-tight">
           €{openstaandBedrag.toFixed(2)}
         </p>
-        {openstaandBedrag === 0 && (
+        {openstaandBedrag === 0 ? (
           <a href="#uitgaven-vast" className="text-xs font-semibold text-primair hover:underline mt-1.5 inline-block">
             Vul in bij Vaste kosten →
           </a>
+        ) : (
+          <div className="flex items-center gap-3 mt-2 text-xs">
+            <span className="flex items-center gap-1 font-semibold text-succes">
+              <span className="h-1.5 w-1.5 rounded-full bg-succes" /> Betaald €{betaaldHuidigeMaand.toFixed(2)}
+            </span>
+            <span className="flex items-center gap-1 font-semibold text-tekst-secundair">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-300" /> Nog te betalen €{nogTeBetalenHuidigeMaand.toFixed(2)}
+            </span>
+          </div>
         )}
       </div>
 

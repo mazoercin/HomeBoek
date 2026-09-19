@@ -8,20 +8,6 @@ export interface DoelProjectie {
 }
 
 /**
- * Benadert hoeveel er al gespaard is voor een doel: aantal volledig
- * verstreken maanden sinds aanmaak × het maandelijks bedrag. Een
- * gepauzeerd doel spaart niet verder, dus telt als 0.
- */
-export function berekenReedsGespaard(doel: Doel, vandaag: Date): number {
-  if (doel.gepauzeerd) return 0;
-  const start = new Date(doel.created_at);
-  const maandenVerschil =
-    (vandaag.getFullYear() - start.getFullYear()) * 12 + (vandaag.getMonth() - start.getMonth());
-  const aantalMaanden = Math.max(0, maandenVerschil);
-  return aantalMaanden * doel.maandelijks_bedrag;
-}
-
-/**
  * Doel-projectie: aantal maanden tot het doelbedrag bereikt is.
  * Formule: maanden = ceil((target - reeds gespaard) / bedrag per maand)
  *

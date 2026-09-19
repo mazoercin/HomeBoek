@@ -5,6 +5,7 @@ import type { DashboardData } from "@/lib/data/dashboard";
 import {
   berekenTotaalInkomen,
   berekenOpenstaandBedrag,
+  berekenNogTeBetalen,
   berekenWatOverblijft,
   berekenPeriodeProjectie,
   genereerVoorstellenBijTekort,
@@ -16,7 +17,7 @@ import { KostenKader } from "@/components/dashboard/KostenKader";
 import { ExtraUitgavenKader } from "@/components/dashboard/ExtraUitgavenKader";
 import { WatAlsKader } from "@/components/dashboard/WatAlsKader";
 import { DoelenSectie } from "@/components/dashboard/DoelenSectie";
-import { GoudSectie } from "@/components/dashboard/GoudSectie";
+import { InvesteringenSectie } from "@/components/dashboard/InvesteringenSectie";
 import { VoorstellenSectie } from "@/components/dashboard/VoorstellenSectie";
 import { GrafiekenSectie } from "@/components/dashboard/GrafiekenSectie";
 import { GevarenZone } from "@/components/dashboard/GevarenZone";
@@ -25,6 +26,7 @@ import {
   zetVasteKostBetaald,
   zetFactuurBetaald,
   pasWatAlsToe,
+  zetUitgaveNietGeskipt,
   voegVasteKostToe,
   verwijderVasteKost,
   voegFactuurToe,
@@ -35,7 +37,9 @@ import {
   verwijderDoel,
   zetDoelGepauzeerd,
   herschikDoelen,
-  voegGoudTransactieToe,
+  voegDoelBijdrageToe,
+  voegInvesteringToe,
+  voegInvesteringTransactieToe,
   voegVastInkomenToe,
   verwijderVastInkomen,
   wisAlleData,
@@ -99,6 +103,43 @@ export function DashboardClient({
   );
   const watOverblijftHuidigeMaand = berekenWatOverblijft(inkomenHuidigeMaand, uitgavenHuidigeMaand);
 
+  // Betaald/nog-te-betalen-opsplitsing geldt enkel voor vaste kosten + facturen
+  // (extra uitgaven hebben geen betaald-status) en altijd voor de HUIDIGE maand,
+  // ongeacht de gekozen periode — betaald-status bestaat nu eenmaal per maand.
+  const kostenMetBetaalStatusHuidigeMaand = useMemo(
+    () =>
+      berekenOpenstaandBedrag({
+        vasteKosten: data.vasteKosten,
+        facturen: data.facturen,
+        extraUitgaven: [],
+        geskipteUitgaveIds: [],
+        maand: huidigeMaand,
+      }),
+    [data, huidigeMaand]
+  );
+  const nogTeBetalenHuidigeMaand = useMemo(
+    () =>
+      berekenNogTeBetalen({
+        vasteKosten: data.vasteKosten,
+        facturen: data.facturen,
+        extraUitgaven: [],
+        geskipteUitgaveIds: [],
+        maand: huidigeMaand,
+        vasteKostenBetaald: data.vasteKostenBetaald.map((s) => ({
+          itemId: s.vaste_kost_id,
+          maand: s.maand,
+          betaald: s.betaald,
+        })),
+        facturenBetaald: data.facturenBetaald.map((s) => ({
+          itemId: s.factuur_id,
+          maand: s.maand,
+          betaald: s.betaald,
+        })),
+      }),
+    [data, huidigeMaand]
+  );
+  const betaaldHuidigeMaand = kostenMetBetaalStatusHuidigeMaand - nogTeBetalenHuidigeMaand;
+
   const voorstellen = useMemo(() => {
     if (watOverblijftHuidigeMaand >= 0) return [];
     return genereerVoorstellenBijTekort({
@@ -136,6 +177,8 @@ export function DashboardClient({
           totaalInkomen={totaalInkomen}
           openstaandBedrag={openstaandBedrag}
           watOverblijft={watOverblijft}
+          betaaldHuidigeMaand={betaaldHuidigeMaand}
+          nogTeBetalenHuidigeMaand={nogTeBetalenHuidigeMaand}
         />
       </ScrollReveal>
 
@@ -223,8 +266,12 @@ export function DashboardClient({
           <ExtraUitgavenKader
             items={data.extraUitgaven}
             geskipteIds={geskipteIds}
+            maand={huidigeMaand}
             onToevoegen={voegExtraUitgaveToe}
             onVerwijderen={verwijderExtraUitgave}
+            onZetGeskipt={(id, maand, geskipt) =>
+              geskipt ? pasWatAlsToe([id], maand) : zetUitgaveNietGeskipt(id, maand)
+            }
           />
         </ScrollReveal>
       </div>
@@ -243,15 +290,22 @@ export function DashboardClient({
         <ScrollReveal vertraging={0}>
           <DoelenSectie
             doelen={data.doelen}
+            bijdragen={data.doelBijdragen}
             huidigeMaand={huidigeMaand}
             onToevoegen={voegDoelToe}
             onVerwijderen={verwijderDoel}
             onPauzeren={zetDoelGepauzeerd}
             onHerschikken={herschikDoelen}
+            onBijdrageToevoegen={voegDoelBijdrageToe}
           />
         </ScrollReveal>
         <ScrollReveal vertraging={80}>
-          <GoudSectie transacties={data.goudTransacties} onToevoegen={voegGoudTransactieToe} />
+          <InvesteringenSectie
+            investeringen={data.investeringen}
+            transacties={data.investeringTransacties}
+            onInvesteringToevoegen={voegInvesteringToe}
+            onTransactieToevoegen={voegInvesteringTransactieToe}
+          />
         </ScrollReveal>
       </div>
 

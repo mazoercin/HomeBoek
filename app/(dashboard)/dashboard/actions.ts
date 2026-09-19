@@ -183,10 +183,38 @@ export async function herschikDoelen(doelIdsInNieuweVolgorde: string[]) {
   );
 }
 
-export async function voegGoudTransactieToe(data: { bedrag: number; datum: string; notitie: string | null }) {
+// ---------- Investeringen ----------
+
+export async function voegInvesteringToe(naam: string) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon goud-transactie niet toevoegen", { data }, () =>
-    supabase.from("goud_transacties").insert(data)
+  return veiligUitvoeren("DB_001", "Kon investering niet toevoegen", { naam }, () =>
+    supabase.from("investeringen").insert({ naam })
+  );
+}
+
+export async function voegInvesteringTransactieToe(data: {
+  investering_id: string;
+  bedrag: number;
+  datum: string;
+  notitie: string | null;
+}) {
+  const supabase = maakServiceClient();
+  return veiligUitvoeren("DB_001", "Kon investering-transactie niet toevoegen", { data }, () =>
+    supabase.from("investering_transacties").insert(data)
+  );
+}
+
+// ---------- Doel-bijdragen ----------
+
+export async function voegDoelBijdrageToe(data: {
+  doel_id: string;
+  bedrag: number;
+  datum: string;
+  notitie: string | null;
+}) {
+  const supabase = maakServiceClient();
+  return veiligUitvoeren("DB_001", "Kon doel-bijdrage niet toevoegen", { data }, () =>
+    supabase.from("doel_bijdragen").insert(data)
   );
 }
 

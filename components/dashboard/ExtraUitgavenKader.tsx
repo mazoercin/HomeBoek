@@ -5,19 +5,22 @@ import { Trash2, Plus, SlidersHorizontal } from "lucide-react";
 import type { ExtraUitgave } from "@/types/database";
 import { StapTip } from "@/components/ui/StapTip";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
+import { Switch } from "@/components/ui/Switch";
 
 interface Props {
   items: ExtraUitgave[];
   geskipteIds: string[];
+  maand: string;
   onToevoegen: (data: {
     label: string;
     bedrag: number;
     overslaanbaar: boolean;
   }) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onVerwijderen: (id: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  onZetGeskipt: (id: string, maand: string, geskipt: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
 }
 
-export function ExtraUitgavenKader({ items, geskipteIds, onToevoegen, onVerwijderen }: Props) {
+export function ExtraUitgavenKader({ items, geskipteIds, maand, onToevoegen, onVerwijderen, onZetGeskipt }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -85,8 +88,24 @@ export function ExtraUitgavenKader({ items, geskipteIds, onToevoegen, onVerwijde
               </div>
               <div className="flex flex-col items-end shrink-0 mr-1">
                 <span className="text-[11px] uppercase tracking-wide text-tekst-secundair font-medium">Bedrag</span>
-                <span className="font-extrabold text-tekst-primair tabular-nums">€{item.bedrag.toFixed(2)}</span>
+                <span
+                  className={`font-extrabold tabular-nums ${geskipt ? "text-tekst-secundair line-through" : "text-tekst-primair"}`}
+                >
+                  €{item.bedrag.toFixed(2)}
+                </span>
               </div>
+              {item.overslaanbaar && (
+                <Switch
+                  aan={!geskipt}
+                  label={geskipt ? `${item.label} weer meetellen deze maand` : `${item.label} overslaan deze maand`}
+                  disabled={isPending}
+                  onWijzig={() =>
+                    startTransition(async () => {
+                      await onZetGeskipt(item.id, maand, !geskipt);
+                    })
+                  }
+                />
+              )}
               <button
                 type="button"
                 aria-label={`Verwijder ${item.label}`}
