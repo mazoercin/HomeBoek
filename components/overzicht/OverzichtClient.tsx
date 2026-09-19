@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { CalendarDays, TrendingUp, TrendingDown } from "lucide-react";
 import { formatteerMaandNaam } from "@/lib/calculations/maand";
@@ -50,13 +49,12 @@ export function OverzichtClient({ maanden }: { maanden: MaandSamenvatting[] }) {
       <div>
         <h2 className="text-lg font-bold tracking-tight mb-3">Maanden</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...maanden].reverse().map((m) => {
+          {maanden.map((m) => {
             const positief = m.saldo >= 0;
             return (
-              <Link
+              <a
                 key={m.maand}
                 href={`/dashboard/${m.maand}`}
-                prefetch={false}
                 className="kaart hover:shadow-card-hover transition-shadow duration-200 block"
               >
                 <div className="flex items-center justify-between mb-3">
@@ -74,7 +72,7 @@ export function OverzichtClient({ maanden }: { maanden: MaandSamenvatting[] }) {
                   <span>Inkomen €{m.inkomen.toFixed(2)}</span>
                   <span>Uitgaven €{m.uitgaven.toFixed(2)}</span>
                 </div>
-              </Link>
+              </a>
             );
           })}
         </div>

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { maakServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import { requireSessie, requireRole } from "@/lib/auth/require-role";
@@ -238,10 +237,18 @@ export async function verwijderInkomen(id: string) {
 
 /**
  * Registreert een nieuwe maand — leeg, of gekopieerd van een bestaande
- * maand (alles opnieuw op onbetaald/niet-geskipt) — en stuurt meteen
- * door naar het dashboard van die nieuwe maand.
+ * maand (alles opnieuw op onbetaald/niet-geskipt). Stuurt bewust NIET
+ * zelf door: Next.js' client-side navigatie-cache bleek na een
+ * redirect() vanuit een Server Action soms nog een verouderde versie
+ * van de doelpagina te tonen (de net aangemaakte maand leek dan
+ * "niet geregistreerd"). De aanroeper doet daarom zelf een volledige
+ * page-navigatie zodra dit `gelukt: true` teruggeeft, wat elke
+ * client-cache overslaat.
  */
-export async function registreerNieuweMaand(nieuweMaand: string, kopieerVan: string | null) {
+export async function registreerNieuweMaand(
+  nieuweMaand: string,
+  kopieerVan: string | null
+): Promise<{ gelukt: boolean; foutmelding?: string }> {
   requireSessie();
   const supabase = maakServiceClient();
 
@@ -268,7 +275,7 @@ export async function registreerNieuweMaand(nieuweMaand: string, kopieerVan: str
   }
 
   opnieuwValideren();
-  redirect(`/dashboard/${nieuweMaand}`);
+  return { gelukt: true };
 }
 
 // ---------- Gevarenzone ----------

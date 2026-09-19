@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import Link from "next/link";
 import { ChevronLeft, ChevronRight, CalendarPlus, CalendarDays, RotateCcw } from "lucide-react";
 import { formatteerMaandNaam, maandSleutel } from "@/lib/calculations/maand";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
@@ -19,6 +18,12 @@ interface Props {
  * paneel om een nieuwe maand te registreren (leeg, of gekopieerd van
  * een bestaande maand — alles komt terug op onbetaald/niet-geskipt te
  * staan, zodat je die nieuwe maand meteen kan opvolgen).
+ *
+ * Alle navigatie tussen maanden gebeurt hier bewust met gewone <a>-
+ * tags (volledige page-navigatie) i.p.v. next/link: Next.js' client-
+ * side navigatiecache bleek na het aanmaken van een maand soms nog een
+ * verouderde versie van de doelpagina te tonen. Een echte page-load
+ * slaat die cache helemaal over.
  */
 export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
   const [open, setOpen] = useState(false);
@@ -49,7 +54,12 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
       return;
     }
     startTransition(async () => {
-      await registreerNieuweMaand(nieuweMaand, kopieren ? huidigeMaand : null);
+      const res = await registreerNieuweMaand(nieuweMaand, kopieren ? huidigeMaand : null);
+      if (res.gelukt) {
+        window.location.href = `/dashboard/${nieuweMaand}`;
+      } else {
+        setFout(res.foutmelding ?? "Kon niet opslaan.");
+      }
     });
   }
 
@@ -57,9 +67,8 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
     <div className="kaart">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
-          <Link
-            href={vorige ? `/dashboard/${vorige}` : "#"}
-            prefetch={false}
+          <a
+            href={vorige ? `/dashboard/${vorige}` : undefined}
             aria-disabled={!vorige}
             className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full transition ${
               vorige
@@ -68,13 +77,12 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
             }`}
           >
             <ChevronLeft size={18} strokeWidth={2.25} />
-          </Link>
+          </a>
           <h2 className="text-lg font-bold tracking-tight min-w-[9rem] text-center">
             {formatteerMaandNaam(huidigeMaand)}
           </h2>
-          <Link
-            href={volgende ? `/dashboard/${volgende}` : "#"}
-            prefetch={false}
+          <a
+            href={volgende ? `/dashboard/${volgende}` : undefined}
             aria-disabled={!volgende}
             className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full transition ${
               volgende
@@ -83,22 +91,18 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
             }`}
           >
             <ChevronRight size={18} strokeWidth={2.25} />
-          </Link>
+          </a>
         </div>
 
         <div className="flex items-center gap-2">
           {vandaag && vandaag !== huidigeMaand && (
-            <Link
-              href={`/dashboard/${vandaag}`}
-              prefetch={false}
-              className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5"
-            >
+            <a href={`/dashboard/${vandaag}`} className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
               <RotateCcw size={16} strokeWidth={2.25} /> Naar huidige maand
-            </Link>
+            </a>
           )}
-          <Link href="/overzicht" prefetch={false} className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
+          <a href="/overzicht" className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
             <CalendarDays size={16} strokeWidth={2.25} /> Overzicht
-          </Link>
+          </a>
           <button
             type="button"
             className="knop-primair !min-h-[38px] !px-4 !text-sm gap-1.5"

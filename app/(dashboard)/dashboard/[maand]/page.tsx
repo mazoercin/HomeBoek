@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { haalDashboardData } from "@/lib/data/dashboard";
 import { haalFamilienaam } from "@/lib/data/instellingen";
 import { haalGeregistreerdeMaanden } from "@/lib/data/maanden";
-import { registreerNieuweMaand } from "../actions";
+import { RegistreerMaandGate } from "@/components/dashboard/RegistreerMaandGate";
 import { DashboardClient } from "../DashboardClient";
 
 const MAAND_PATROON = /^\d{4}-\d{2}$/;
@@ -38,22 +38,7 @@ export default async function DashboardMaandPagina({ params }: { params: { maand
   const isGeregistreerd = alleMaanden.includes(maand);
 
   if (!isGeregistreerd) {
-    async function registreerActie() {
-      "use server";
-      await registreerNieuweMaand(maand, null);
-    }
-
-    return (
-      <div className="kaart text-center max-w-md mx-auto">
-        <p className="text-tekst-primair font-bold mb-2">Deze maand is nog niet geregistreerd</p>
-        <p className="text-tekst-secundair mb-4">Registreer &ldquo;{maand}&rdquo; om er gegevens voor in te vullen.</p>
-        <form action={registreerActie}>
-          <button type="submit" className="knop-primair">
-            Registreer {maand}
-          </button>
-        </form>
-      </div>
-    );
+    return <RegistreerMaandGate maand={maand} />;
   }
 
   return (

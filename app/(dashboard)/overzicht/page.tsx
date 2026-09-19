@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { RotateCcw } from "lucide-react";
 import { requireSessie } from "@/lib/auth/require-role";
 import { haalMaandOverzicht } from "@/lib/data/overzicht";
@@ -18,9 +17,9 @@ export default async function OverzichtPagina() {
           <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">Overzicht</h1>
           <p className="text-sm text-tekst-secundair mt-0.5">Al je maanden in één oogopslag.</p>
         </div>
-        <Link href={`/dashboard/${vandaag}`} prefetch={false} className="knop-secundair gap-1.5">
+        <a href={`/dashboard/${vandaag}`} className="knop-secundair gap-1.5">
           <RotateCcw size={16} strokeWidth={2.25} /> Naar huidige maand
-        </Link>
+        </a>
       </div>
 
       {fout ? (
