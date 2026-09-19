@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DashboardData } from "@/lib/data/dashboard";
 import {
   berekenTotaalInkomen,
@@ -61,6 +61,14 @@ export function DashboardClient({
   alleMaanden: string[];
 }) {
   const [periode, setPeriode] = useState<Periode>(1);
+
+  // Next.js onthoudt soms de scrollpositie van een eerder bezoek aan
+  // dezelfde URL. Bij het wisselen van maand moet je altijd bovenaan
+  // dat nieuwe dashboard landen, dus forceren we dat expliciet i.p.v.
+  // te vertrouwen op scroll-restoration.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [huidigeMaand]);
 
   const projectie = useMemo(
     () =>
