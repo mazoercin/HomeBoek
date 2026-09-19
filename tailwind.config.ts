@@ -3,7 +3,10 @@ import type { Config } from "tailwindcss";
 // Professioneel dashboard-kleurenpalet, gekoppeld aan CSS-variabelen in
 // app/globals.css (licht/donker-varianten daar). Eén bron van waarheid
 // zodat elk component dezelfde tokens hergebruikt.
+const kleur = (naam: string) => `rgb(var(--kleur-${naam}) / <alpha-value>)`;
+
 const config: Config = {
+  darkMode: "class",
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -11,21 +14,22 @@ const config: Config = {
         primair: {
           DEFAULT: "#6366F1",
           dark: "#4F46E5",
-          light: "#EEF2FF",
+          light: kleur("primair-light"),
         },
         secundair: {
           DEFAULT: "#F59E0B",
           dark: "#D97706",
-          light: "#FFFBEB",
+          light: kleur("secundair-light"),
         },
-        succes: { DEFAULT: "#10B981", bg: "#ECFDF5" },
-        tekort: { DEFAULT: "#F43F5E", bg: "#FFF1F2" },
-        goud: { DEFAULT: "#D4AF37", bg: "#FDF8E8" },
-        achtergrond: "#F8FAFC",
-        kaart: "#FFFFFF",
-        "tekst-primair": "#0F172A",
-        "tekst-secundair": "#64748B",
-        rand: "#E2E8F0",
+        succes: { DEFAULT: "#10B981", bg: kleur("succes-bg") },
+        tekort: { DEFAULT: "#F43F5E", bg: kleur("tekort-bg") },
+        goud: { DEFAULT: "#D4AF37", bg: kleur("goud-bg") },
+        achtergrond: kleur("achtergrond"),
+        kaart: kleur("kaart"),
+        "kaart-verhoogd": kleur("kaart-verhoogd"),
+        "tekst-primair": kleur("tekst-primair"),
+        "tekst-secundair": kleur("tekst-secundair"),
+        rand: kleur("rand"),
       },
       fontFamily: {
         sans: ["-apple-system", "BlinkMacSystemFont", "Inter", "Segoe UI", "Roboto", "sans-serif"],

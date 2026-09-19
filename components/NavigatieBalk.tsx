@@ -7,6 +7,7 @@ import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, Settings, Menu, X
 import type { Rol } from "@/types/database";
 import { Logo } from "@/components/ui/Logo";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
+import { ThemaToggle } from "@/components/ui/ThemaToggle";
 import { uitloggen } from "@/app/(dashboard)/logout-action";
 
 const LINKS = [
@@ -63,7 +64,7 @@ export function NavigatieBalk({ rol }: { rol: Rol }) {
                   <Link
                     href={link.href}
                     className={`flex items-center gap-2 py-2 px-4 min-h-[40px] rounded-full text-sm font-semibold transition-colors duration-150 ${
-                      actief ? "text-primair bg-primair-light" : "text-tekst-secundair hover:text-primair hover:bg-slate-100"
+                      actief ? "text-primair bg-primair-light" : "text-tekst-secundair hover:text-primair hover:bg-slate-100 dark:hover:bg-slate-800"
                     }`}
                   >
                     <Icoon size={17} strokeWidth={2.25} aria-hidden />
@@ -73,27 +74,33 @@ export function NavigatieBalk({ rol }: { rol: Rol }) {
               );
             })}
           </ul>
-          <form action={uitloggen} className="ml-1 pl-2 border-l border-rand">
-            <button
-              type="submit"
-              aria-label="Uitloggen"
-              title="Uitloggen"
-              className="flex items-center gap-2 py-2 px-3 min-h-[40px] rounded-full text-sm font-semibold text-tekst-secundair hover:text-tekort hover:bg-tekort-bg transition-colors duration-150"
-            >
-              <LogOut size={17} strokeWidth={2.25} aria-hidden />
-            </button>
-          </form>
+          <div className="flex items-center gap-0.5 ml-1 pl-2 border-l border-rand">
+            <ThemaToggle />
+            <form action={uitloggen}>
+              <button
+                type="submit"
+                aria-label="Uitloggen"
+                title="Uitloggen"
+                className="flex items-center gap-2 py-2 px-3 min-h-[40px] rounded-full text-sm font-semibold text-tekst-secundair hover:text-tekort hover:bg-tekort-bg transition-colors duration-150"
+              >
+                <LogOut size={17} strokeWidth={2.25} aria-hidden />
+              </button>
+            </form>
+          </div>
         </div>
 
-        <button
-          type="button"
-          aria-label={menuOpen ? "Menu sluiten" : "Menu openen"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((v) => !v)}
-          className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full text-tekst-primair hover:bg-slate-100 transition"
-        >
-          {menuOpen ? <X size={22} strokeWidth={2.25} /> : <Menu size={22} strokeWidth={2.25} />}
-        </button>
+        <div className="flex items-center gap-0.5 md:hidden">
+          <ThemaToggle />
+          <button
+            type="button"
+            aria-label={menuOpen ? "Menu sluiten" : "Menu openen"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full text-tekst-primair hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            {menuOpen ? <X size={22} strokeWidth={2.25} /> : <Menu size={22} strokeWidth={2.25} />}
+          </button>
+        </div>
       </div>
 
       <Uitklapbaar open={menuOpen}>
@@ -108,7 +115,7 @@ export function NavigatieBalk({ rol }: { rol: Rol }) {
                     href={link.href}
                     onClick={() => setMenuOpen(false)}
                     className={`flex items-center gap-3 min-h-[48px] px-3 rounded-xl text-[15px] font-semibold transition-colors duration-150 ${
-                      actief ? "text-primair bg-primair-light" : "text-tekst-primair hover:bg-slate-100"
+                      actief ? "text-primair bg-primair-light" : "text-tekst-primair hover:bg-slate-100 dark:hover:bg-slate-800"
                     }`}
                   >
                     <Icoon size={19} strokeWidth={2.25} aria-hidden />
