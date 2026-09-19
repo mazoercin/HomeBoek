@@ -7,7 +7,6 @@ import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, CalendarDays, Use
 import type { HouseholdRol } from "@/types/database";
 import { Logo } from "@/components/ui/Logo";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
-import { ThemaToggle } from "@/components/ui/ThemaToggle";
 import { uitloggen } from "@/app/(dashboard)/logout-action";
 
 const LINKS = [
@@ -86,7 +85,6 @@ export function NavigatieBalk({ rol }: { rol: HouseholdRol }) {
             })}
           </ul>
           <div className="flex items-center gap-0.5 ml-1 pl-2 border-l border-rand">
-            <ThemaToggle />
             <form action={uitloggen}>
               <button
                 type="submit"
@@ -101,7 +99,6 @@ export function NavigatieBalk({ rol }: { rol: HouseholdRol }) {
         </div>
 
         <div className="flex items-center gap-0.5 md:hidden">
-          <ThemaToggle />
           <button
             type="button"
             aria-label={menuOpen ? "Menu sluiten" : "Menu openen"}

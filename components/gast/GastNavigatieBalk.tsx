@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { UserPlus, LogIn } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
-import { ThemaToggle } from "@/components/ui/ThemaToggle";
 
 /**
  * Sterk vereenvoudigde kopbalk voor gast-modus: geen gezin/instellingen/
@@ -16,7 +15,6 @@ export function GastNavigatieBalk() {
           <Logo compact />
         </Link>
         <div className="flex items-center gap-1.5">
-          <ThemaToggle />
           <Link
             href="/login"
             className="hidden sm:flex items-center gap-1.5 py-2 px-3 min-h-[40px] rounded-full text-sm font-semibold text-tekst-secundair hover:text-primair hover:bg-primair-light transition-colors duration-150"
