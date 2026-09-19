@@ -25,10 +25,17 @@ export function StartHouseholdForm() {
       // Had je al gegevens ingevuld in gast-modus (zonder account)? Zet
       // die dan nu over naar je zonet aangemaakte huishouden — enkel de
       // lokale kopie wissen als dat écht gelukt is, anders raak je niets
-      // kwijt en kan je het later gewoon opnieuw proberen.
-      if (heeftGastData()) {
-        const importResultaat = await importeerGastData(bouwGastImportPayload(leesGastData()));
-        if (importResultaat.gelukt) wisGastData();
+      // kwijt en kan je het later gewoon opnieuw proberen. Dit is bewust
+      // best-effort: het huishouden bestaat op dit punt al, dus een fout
+      // hier (netwerk, onverwachte data, ...) mag de gebruiker nooit
+      // blokkeren — anders lijkt de knop het simpelweg niet te doen.
+      try {
+        if (heeftGastData()) {
+          const importResultaat = await importeerGastData(bouwGastImportPayload(leesGastData()));
+          if (importResultaat.gelukt) wisGastData();
+        }
+      } catch (error) {
+        console.error("Kon gast-data niet overzetten:", error);
       }
 
       window.location.href = "/dashboard";
