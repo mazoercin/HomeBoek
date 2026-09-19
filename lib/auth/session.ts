@@ -66,8 +66,22 @@ export function zetSessieCookie(data: SessieData): void {
   });
 }
 
+/**
+ * Kan zowel vanuit een Server Action/Route Handler (bv. uitloggen()) als
+ * vanuit een gewone Server Component render (bv. requireSessie() die een
+ * verweesde cookie opruimt) aangeroepen worden. Cookies schrijven mag
+ * enkel in de eerste twee contexten — in een Server Component gooit
+ * Next.js daar een runtime-fout op. De eigenlijke opruiming is in dat
+ * geval niet cruciaal: de daaropvolgende redirect("/login") is het punt,
+ * en een volgende schrijfbare context (login/uitloggen) overschrijft de
+ * cookie toch.
+ */
 export function verwijderSessieCookie(): void {
-  cookies().delete(COOKIE_NAAM);
+  try {
+    cookies().delete(COOKIE_NAAM);
+  } catch {
+    // Zie opmerking hierboven — verwacht binnen een Server Component render.
+  }
 }
 
 /** Leest en valideert de sessie-cookie. Geeft `null` als er geen (geldige) sessie is. */
