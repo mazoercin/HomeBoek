@@ -59,6 +59,7 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
         <div className="flex items-center gap-1">
           <Link
             href={vorige ? `/dashboard/${vorige}` : "#"}
+            prefetch={false}
             aria-disabled={!vorige}
             className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full transition ${
               vorige
@@ -73,6 +74,7 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
           </h2>
           <Link
             href={volgende ? `/dashboard/${volgende}` : "#"}
+            prefetch={false}
             aria-disabled={!volgende}
             className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full transition ${
               volgende
@@ -86,11 +88,15 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
 
         <div className="flex items-center gap-2">
           {vandaag && vandaag !== huidigeMaand && (
-            <Link href={`/dashboard/${vandaag}`} className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
+            <Link
+              href={`/dashboard/${vandaag}`}
+              prefetch={false}
+              className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5"
+            >
               <RotateCcw size={16} strokeWidth={2.25} /> Naar huidige maand
             </Link>
           )}
-          <Link href="/overzicht" className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
+          <Link href="/overzicht" prefetch={false} className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
             <CalendarDays size={16} strokeWidth={2.25} /> Overzicht
           </Link>
           <button

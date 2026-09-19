@@ -7,6 +7,11 @@ import { DashboardClient } from "../DashboardClient";
 
 const MAAND_PATROON = /^\d{4}-\d{2}$/;
 
+// Nooit cachen: financiële data moet altijd vers zijn, en zonder dit
+// kon Next.js na een mutatie (bv. een nieuwe maand registreren) nog
+// even een verouderde versie van deze pagina teruggeven.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardMaandPagina({ params }: { params: { maand: string } }) {
   const { maand } = params;
   if (!MAAND_PATROON.test(maand)) notFound();

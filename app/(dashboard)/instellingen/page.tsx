@@ -14,6 +14,8 @@ import {
 } from "./actions";
 import { uitloggen } from "../logout-action";
 
+export const dynamic = "force-dynamic";
+
 export default async function InstellingenPagina() {
   const sessie = requireRole("admin");
   const [regels, familienaam, gebruikers] = await Promise.all([

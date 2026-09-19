@@ -56,6 +56,7 @@ export function OverzichtClient({ maanden }: { maanden: MaandSamenvatting[] }) {
               <Link
                 key={m.maand}
                 href={`/dashboard/${m.maand}`}
+                prefetch={false}
                 className="kaart hover:shadow-card-hover transition-shadow duration-200 block"
               >
                 <div className="flex items-center justify-between mb-3">
