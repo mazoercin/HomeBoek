@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TrendingUp, Coins, Plus } from "lucide-react";
+import { TrendingUp, Coins, Plus, Pencil, Trash2 } from "lucide-react";
 import type { Investering, InvesteringTransactie } from "@/types/database";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
@@ -17,6 +17,8 @@ interface Props {
     datum: string;
     notitie: string | null;
   }) => ActieResultaat;
+  onHernoemen: (id: string, naam: string) => ActieResultaat;
+  onVerwijderen: (id: string) => ActieResultaat;
 }
 
 /** Eén investeringssoort (bv. Goud, Aandelen) met zijn eigen inleg-geschiedenis en "+ Inleg"-formulier. */
@@ -24,13 +26,19 @@ function InvesteringKaart({
   investering,
   transacties,
   onToevoegen,
+  onHernoemen,
+  onVerwijderen,
 }: {
   investering: Investering;
   transacties: InvesteringTransactie[];
   onToevoegen: Props["onTransactieToevoegen"];
+  onHernoemen: Props["onHernoemen"];
+  onVerwijderen: Props["onVerwijderen"];
 }) {
   const [open, setOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
+  const [hernoemenOpen, setHernoemenOpen] = useState(false);
+  const [nieuweNaam, setNieuweNaam] = useState(investering.naam);
   const [isPending, startTransition] = useTransition();
 
   const totaal = transacties.reduce((som, t) => som + t.bedrag, 0);
@@ -51,6 +59,20 @@ function InvesteringKaart({
     });
   }
 
+  function bevestigHernoemen() {
+    const naam = nieuweNaam.trim();
+    if (!naam || naam === investering.naam) {
+      setHernoemenOpen(false);
+      setNieuweNaam(investering.naam);
+      return;
+    }
+    startTransition(async () => {
+      const res = await onHernoemen(investering.id, naam);
+      if (res.gelukt) setHernoemenOpen(false);
+      else setFout(res.foutmelding ?? "Kon niet hernoemen.");
+    });
+  }
+
   return (
     <div className="rounded-xl border border-goud/20 bg-gradient-to-br from-goud-bg to-white p-3">
       <div className="flex items-center gap-2.5 mb-2">
@@ -58,8 +80,52 @@ function InvesteringKaart({
           <Coins size={16} color="#ffffff" strokeWidth={2.25} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] uppercase tracking-wide font-semibold text-goud truncate">{investering.naam}</p>
+          {hernoemenOpen ? (
+            <input
+              autoFocus
+              value={nieuweNaam}
+              onChange={(e) => setNieuweNaam(e.target.value)}
+              onBlur={bevestigHernoemen}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") bevestigHernoemen();
+                if (e.key === "Escape") {
+                  setNieuweNaam(investering.naam);
+                  setHernoemenOpen(false);
+                }
+              }}
+              disabled={isPending}
+              className="veld-input !min-h-[28px] !py-1 text-xs font-semibold uppercase tracking-wide text-goud"
+            />
+          ) : (
+            <p className="text-[11px] uppercase tracking-wide font-semibold text-goud truncate">{investering.naam}</p>
+          )}
           <p className="text-lg font-extrabold text-goud tabular-nums leading-tight">€{totaal.toFixed(2)}</p>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            type="button"
+            aria-label={`${investering.naam} hernoemen`}
+            disabled={isPending}
+            onClick={() => setHernoemenOpen(true)}
+            className="min-h-[30px] min-w-[30px] flex items-center justify-center rounded-full text-goud/70 hover:text-goud hover:bg-goud/10 transition"
+          >
+            <Pencil size={14} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            aria-label={`${investering.naam} verwijderen`}
+            disabled={isPending}
+            onClick={() => {
+              if (confirm(`"${investering.naam}" en al zijn inleg-geschiedenis verwijderen?`)) {
+                startTransition(async () => {
+                  await onVerwijderen(investering.id);
+                });
+              }
+            }}
+            className="min-h-[30px] min-w-[30px] flex items-center justify-center rounded-full text-goud/70 hover:text-tekort hover:bg-tekort-bg transition"
+          >
+            <Trash2 size={14} strokeWidth={2.25} />
+          </button>
         </div>
       </div>
 
@@ -120,7 +186,14 @@ function InvesteringKaart({
  * Aandelen, Crypto, ...), elk met eigen handmatige inleg-registratie
  * — geen live koers, gewoon wat je zelf invult, net als bij Goud.
  */
-export function InvesteringenSectie({ investeringen, transacties, onInvesteringToevoegen, onTransactieToevoegen }: Props) {
+export function InvesteringenSectie({
+  investeringen,
+  transacties,
+  onInvesteringToevoegen,
+  onTransactieToevoegen,
+  onHernoemen,
+  onVerwijderen,
+}: Props) {
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -164,6 +237,8 @@ export function InvesteringenSectie({ investeringen, transacties, onInvesteringT
             investering={inv}
             transacties={transacties.filter((t) => t.investering_id === inv.id)}
             onToevoegen={onTransactieToevoegen}
+            onHernoemen={onHernoemen}
+            onVerwijderen={onVerwijderen}
           />
         ))}
       </div>

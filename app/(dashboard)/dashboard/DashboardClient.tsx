@@ -8,6 +8,7 @@ import {
   berekenNogTeBetalen,
   berekenWatOverblijft,
   berekenPeriodeProjectie,
+  berekenBijdragenAftrekVoorMaand,
   genereerVoorstellenBijTekort,
 } from "@/lib/calculations";
 import { PeriodeSelector, type Periode } from "@/components/dashboard/PeriodeSelector";
@@ -40,6 +41,8 @@ import {
   voegDoelBijdrageToe,
   voegInvesteringToe,
   voegInvesteringTransactieToe,
+  hernoemInvestering,
+  verwijderInvestering,
   voegInkomenToe,
   verwijderInkomen,
   wisAlleData,
@@ -66,6 +69,7 @@ export function DashboardClient({
         vasteKosten: data.vasteKosten,
         facturen: data.facturen,
         extraUitgaven: data.extraUitgaven,
+        doelBijdragen: data.doelBijdragen,
         startMaand: huidigeMaand,
         aantalMaanden: periode,
       }),
@@ -85,7 +89,7 @@ export function DashboardClient({
         inkomen: data.inkomen,
         extraInkomen: data.extraInkomen,
         maand: huidigeMaand,
-      }),
+      }) - berekenBijdragenAftrekVoorMaand(data.doelBijdragen, huidigeMaand),
     [data, huidigeMaand]
   );
   const uitgavenHuidigeMaand = useMemo(
@@ -137,6 +141,9 @@ export function DashboardClient({
     [data, huidigeMaand]
   );
   const betaaldHuidigeMaand = kostenMetBetaalStatusHuidigeMaand - nogTeBetalenHuidigeMaand;
+  // Vaste kosten + facturen van deze maand, ongeacht betaald-status en
+  // ongeacht de gekozen periode-tab — dit blijft altijd "deze maand".
+  const totaalOpenstaandHuidigeMaand = kostenMetBetaalStatusHuidigeMaand;
 
   const voorstellen = useMemo(() => {
     if (watOverblijftHuidigeMaand >= 0) return [];
@@ -177,6 +184,7 @@ export function DashboardClient({
           watOverblijft={watOverblijft}
           betaaldHuidigeMaand={betaaldHuidigeMaand}
           nogTeBetalenHuidigeMaand={nogTeBetalenHuidigeMaand}
+          totaalOpenstaandHuidigeMaand={totaalOpenstaandHuidigeMaand}
         />
       </ScrollReveal>
 
@@ -303,6 +311,8 @@ export function DashboardClient({
             transacties={data.investeringTransacties}
             onInvesteringToevoegen={voegInvesteringToe}
             onTransactieToevoegen={voegInvesteringTransactieToe}
+            onHernoemen={hernoemInvestering}
+            onVerwijderen={verwijderInvestering}
           />
         </ScrollReveal>
       </div>

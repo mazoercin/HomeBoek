@@ -1,8 +1,9 @@
 import { logger } from "@/lib/logger";
 import { berekenTotaalInkomen } from "./inkomen";
 import { berekenOpenstaandBedrag } from "./uitgaven";
+import { berekenBijdragenAftrekVoorMaand } from "./doelen";
 import { voegMaandenToe } from "./maand";
-import type { Inkomen, ExtraInkomen, VasteKost, Factuur, ExtraUitgave } from "@/types/database";
+import type { Inkomen, ExtraInkomen, VasteKost, Factuur, ExtraUitgave, DoelBijdrage } from "@/types/database";
 
 export interface MaandProjectie {
   maand: string; // YYYY-MM
@@ -18,6 +19,8 @@ export interface PeriodeProjectieInput {
   vasteKosten: VasteKost[];
   facturen: Factuur[];
   extraUitgaven: ExtraUitgave[];
+  /** Doel-stortingen die bewust van het inkomen van hun maand afgetrokken worden. */
+  doelBijdragen: DoelBijdrage[];
   startMaand: string; // YYYY-MM, huidige maand
   aantalMaanden: 1 | 3 | 6 | 12;
 }
@@ -39,12 +42,14 @@ export function berekenPeriodeProjectie(input: PeriodeProjectieInput): MaandProj
     const maand = voegMaandenToe(input.startMaand, i);
 
     try {
-      const inkomen = berekenTotaalInkomen({
+      const brutoInkomen = berekenTotaalInkomen({
         inkomen: input.inkomen,
         // extra inkomen telt enkel mee in de maand waarvoor het bedoeld is
         extraInkomen: i === 0 ? input.extraInkomenHuidigeMaand : [],
         maand,
       });
+      const bijdragenAftrek = berekenBijdragenAftrekVoorMaand(input.doelBijdragen, maand);
+      const inkomen = brutoInkomen - bijdragenAftrek;
 
       const uitgaven = berekenOpenstaandBedrag({
         vasteKosten: input.vasteKosten,

@@ -13,7 +13,7 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard", icoon: LayoutDashboard },
   { href: "/dashboard#inkomen", label: "Inkomen", icoon: Wallet },
   { href: "/dashboard#uitgaven", label: "Uitgaven", icoon: Receipt },
-  { href: "/dashboard#doelen", label: "Doelen", icoon: Target },
+  { href: "/dashboard#doelen", label: "Spaarpot", icoon: Target },
   { href: "/dashboard#investeringen", label: "Investeringen", icoon: TrendingUp },
 ];
 

@@ -204,6 +204,20 @@ export async function voegInvesteringTransactieToe(data: {
   );
 }
 
+export async function hernoemInvestering(id: string, naam: string) {
+  const supabase = maakServiceClient();
+  return veiligUitvoeren("DB_001", "Kon investering niet hernoemen", { id, naam }, () =>
+    supabase.from("investeringen").update({ naam }).eq("id", id)
+  );
+}
+
+export async function verwijderInvestering(id: string) {
+  const supabase = maakServiceClient();
+  return veiligUitvoeren("DB_001", "Kon investering niet verwijderen", { id }, () =>
+    supabase.from("investeringen").delete().eq("id", id)
+  );
+}
+
 // ---------- Doel-bijdragen ----------
 
 export async function voegDoelBijdrageToe(data: {
@@ -211,6 +225,7 @@ export async function voegDoelBijdrageToe(data: {
   bedrag: number;
   datum: string;
   notitie: string | null;
+  aftrekken_van_inkomen: boolean;
 }) {
   const supabase = maakServiceClient();
   return veiligUitvoeren("DB_001", "Kon doel-bijdrage niet toevoegen", { data }, () =>

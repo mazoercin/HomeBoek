@@ -1,61 +1,73 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { maakServerClient } from "@/lib/supabase/server";
 import { zetSessieCookie } from "@/lib/auth/session";
-import { haalOfMaakAdminGebruiker } from "@/lib/auth/gebruiker";
+import { haalGebruikersProfiel, maakGebruikersProfiel } from "@/lib/auth/gebruiker";
 import { logger } from "@/lib/logger.server";
 
 export interface LoginState {
   fout: string | null;
 }
 
+function vertaalFout(bericht: string): string {
+  if (bericht.toLowerCase().includes("email not confirmed")) {
+    return "Bevestig eerst je e-mailadres via de link die we je gestuurd hebben.";
+  }
+  return "E-mailadres of wachtwoord klopt niet.";
+}
+
 /**
- * Server Action voor de login-flow. Gebruikersnaam/wachtwoord worden
- * UITSLUITEND server-side vergeleken met ADMIN_USERNAME/ADMIN_PASSWORD
- * uit de omgevingsvariabelen — het wachtwoord verlaat de server nooit.
+ * Server Action voor de login-flow. Verifieert e-mail + wachtwoord via
+ * Supabase Auth (nooit zelf wachtwoorden vergelijken/opslaan), en zet
+ * daarna onze eigen lichte sessie-cookie op basis van het gekoppelde
+ * gebruikersprofiel (gebruikersnaam + rol).
  */
 export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
-  const gebruikersnaam = String(formData.get("gebruikersnaam") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const wachtwoord = String(formData.get("wachtwoord") ?? "");
 
-  const verwachteGebruikersnaam = process.env.ADMIN_USERNAME;
-  const verwachtWachtwoord = process.env.ADMIN_PASSWORD;
-
-  if (!verwachteGebruikersnaam || !verwachtWachtwoord) {
-    logger.error({
-      code: "AUTH_001",
-      message: "ADMIN_USERNAME/ADMIN_PASSWORD ontbreken in de omgeving",
-    });
-    return { fout: "Gebruikersnaam of wachtwoord klopt niet" };
+  if (!email || !wachtwoord) {
+    return { fout: "Vul e-mailadres en wachtwoord in." };
   }
 
-  const klopt =
-    gebruikersnaam === verwachteGebruikersnaam && wachtwoord === verwachtWachtwoord;
+  const supabase = maakServerClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
 
-  if (!klopt) {
+  if (error || !data.user) {
     logger.warn({
       code: "AUTH_001",
       message: "Login mislukt",
-      context: { ingevoerdeGebruikersnaam: gebruikersnaam },
+      context: { email, error: error?.message ?? "geen gebruiker" },
     });
-    return { fout: "Gebruikersnaam of wachtwoord klopt niet" };
+    return { fout: vertaalFout(error?.message ?? "") };
   }
 
-  const gebruiker = await haalOfMaakAdminGebruiker(verwachteGebruikersnaam);
+  let profiel = await haalGebruikersProfiel(data.user.id);
 
-  if (!gebruiker) {
-    logger.error({
+  // Zou niet mogen gebeuren (profiel wordt bij registratie aangemaakt),
+  // maar val veilig terug i.p.v. de gebruiker vast te laten lopen.
+  if (!profiel) {
+    logger.warn({
       code: "AUTH_001",
-      message: "Login geslaagd maar kon gebruikersrecord niet ophalen/aanmaken",
-      context: { gebruikersnaam },
+      message: "Ingelogde gebruiker had nog geen profiel — alsnog aangemaakt",
+      context: { gebruikerId: data.user.id },
     });
+    profiel = await maakGebruikersProfiel({
+      id: data.user.id,
+      email,
+      gebruikersnaam: (data.user.user_metadata?.gebruikersnaam as string | undefined) ?? email,
+    });
+  }
+
+  if (!profiel) {
     return { fout: "Er ging iets mis. Probeer het opnieuw." };
   }
 
   zetSessieCookie({
-    gebruikerId: gebruiker.id,
-    gebruikersnaam: gebruiker.gebruikersnaam,
-    rol: gebruiker.rol,
+    gebruikerId: profiel.id,
+    gebruikersnaam: profiel.gebruikersnaam,
+    rol: profiel.rol,
   });
 
   redirect("/dashboard");

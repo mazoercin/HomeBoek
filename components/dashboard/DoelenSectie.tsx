@@ -17,6 +17,7 @@ import type { Doel, DoelBijdrage } from "@/types/database";
 import { berekenDoelProjectie } from "@/lib/calculations/doelen";
 import { StapTip } from "@/components/ui/StapTip";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
+import { Switch } from "@/components/ui/Switch";
 
 type ActieResultaat = Promise<{ gelukt: boolean; foutmelding?: string }>;
 
@@ -33,7 +34,13 @@ interface Props {
   onVerwijderen: (id: string) => ActieResultaat;
   onPauzeren: (id: string, gepauzeerd: boolean) => ActieResultaat;
   onHerschikken: (doelIdsInNieuweVolgorde: string[]) => ActieResultaat;
-  onBijdrageToevoegen: (data: { doel_id: string; bedrag: number; datum: string; notitie: string | null }) => ActieResultaat;
+  onBijdrageToevoegen: (data: {
+    doel_id: string;
+    bedrag: number;
+    datum: string;
+    notitie: string | null;
+    aftrekken_van_inkomen: boolean;
+  }) => ActieResultaat;
 }
 
 /** Doelen zijn goud-vrij hier — investeringen krijgen hun eigen sectie op het dashboard. */
@@ -124,7 +131,7 @@ export function DoelenSectie({
 
   return (
     <div className="kaart" id="doelen">
-      <h2 className="text-lg font-bold tracking-tight mb-1">Doelen</h2>
+      <h2 className="text-lg font-bold tracking-tight mb-1">Spaarpot voor doelen</h2>
       <p className="text-xs text-tekst-secundair mb-4">Houd het grip-icoon vast om de volgorde te verslepen.</p>
 
       {volgorde.length === 0 && !formOpen && (
@@ -224,6 +231,7 @@ function DoelRij({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: doel.id });
   const [stortingOpen, setStortingOpen] = useState(false);
   const [stortingFout, setStortingFout] = useState<string | null>(null);
+  const [aftrekken, setAftrekken] = useState(false);
 
   const stijl = {
     transform: CSS.Transform.toString(transform),
@@ -244,9 +252,14 @@ function DoelRij({
         bedrag,
         datum: new Date().toISOString().slice(0, 10),
         notitie: null,
+        aftrekken_van_inkomen: aftrekken,
       });
-      if (res.gelukt) setStortingOpen(false);
-      else setStortingFout(res.foutmelding ?? "Kon niet opslaan.");
+      if (res.gelukt) {
+        setStortingOpen(false);
+        setAftrekken(false);
+      } else {
+        setStortingFout(res.foutmelding ?? "Kon niet opslaan.");
+      }
     });
   }
 
@@ -294,21 +307,34 @@ function DoelRij({
       </p>
 
       <Uitklapbaar open={stortingOpen}>
-        <form action={submitStorting} className="flex gap-1.5 pt-2">
-          <input
-            name="bedrag"
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0.01"
-            placeholder="Bedrag (€)"
-            className="veld-input !min-h-[36px] text-sm flex-1"
-            required
-            autoFocus
-          />
-          <button type="submit" className="knop-primair !min-h-[36px] !px-4 !text-sm" disabled={isPending}>
-            OK
-          </button>
+        <form action={submitStorting} className="space-y-2 pt-2">
+          <div className="flex gap-1.5">
+            <input
+              name="bedrag"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0.01"
+              placeholder="Bedrag (€)"
+              className="veld-input !min-h-[36px] text-sm flex-1"
+              required
+              autoFocus
+            />
+            <button type="submit" className="knop-primair !min-h-[36px] !px-4 !text-sm" disabled={isPending}>
+              OK
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2">
+            <span className="text-xs text-tekst-secundair leading-tight">
+              Aftrekken van je inkomen deze maand?
+            </span>
+            <Switch
+              aan={aftrekken}
+              onWijzig={() => setAftrekken((v) => !v)}
+              label={aftrekken ? "Niet meer aftrekken van je inkomen" : "Aftrekken van je inkomen deze maand"}
+              kleurAan="primair"
+            />
+          </div>
         </form>
         {stortingFout && <p className="veld-fout !mt-1 !text-xs">{stortingFout}</p>}
       </Uitklapbaar>

@@ -8,6 +8,7 @@ export type Rol = "admin" | "lid";
 
 export interface Gebruiker {
   id: string;
+  email: string;
   gebruikersnaam: string;
   rol: Rol;
   created_at: string;
@@ -142,6 +143,8 @@ export interface DoelBijdrage {
   bedrag: number;
   datum: string; // YYYY-MM-DD
   notitie: string | null;
+  /** Telt dit bedrag mee als afgetrokken van het inkomen van de maand van `datum`? */
+  aftrekken_van_inkomen: boolean;
   created_at: string;
 }
 

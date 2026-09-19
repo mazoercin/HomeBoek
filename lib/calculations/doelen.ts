@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import type { Doel } from "@/types/database";
+import type { Doel, DoelBijdrage } from "@/types/database";
 import { voegMaandenToe } from "./maand";
 
 export interface DoelProjectie {
@@ -43,4 +43,30 @@ export function berekenDoelProjectie(
     });
     return { maanden: null, datum: null };
   }
+}
+
+/**
+ * Som van de doel-stortingen die bewust "van je inkomen afgetrokken"
+ * zijn voor `maand` — gebruikt om het inkomen van die maand te
+ * verminderen met wat er al opzij gezet is voor een spaarpot.
+ */
+export function berekenBijdragenAftrekVoorMaand(bijdragen: DoelBijdrage[], maand: string): number {
+  let totaal = 0;
+  for (const bijdrage of bijdragen) {
+    try {
+      if (!bijdrage.aftrekken_van_inkomen) continue;
+      if (bijdrage.datum.slice(0, 7) !== maand) continue;
+      if (!Number.isFinite(bijdrage.bedrag) || bijdrage.bedrag < 0) {
+        throw new Error(`Ongeldig bedrag voor doel-bijdrage: ${bijdrage.bedrag}`);
+      }
+      totaal += bijdrage.bedrag;
+    } catch (error) {
+      logger.error({
+        code: "CALC_001",
+        message: "Doel-bijdrage overgeslagen bij inkomensaftrek door ongeldige data",
+        context: { itemId: bijdrage.id, error: error instanceof Error ? error.message : String(error) },
+      });
+    }
+  }
+  return totaal;
 }
