@@ -1,12 +1,12 @@
-import { requireSessie } from "@/lib/auth/require-role";
+import { vereisHousehold } from "@/lib/auth/household";
 import { NavigatieBalk } from "@/components/NavigatieBalk";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const sessie = requireSessie();
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const context = await vereisHousehold();
 
   return (
     <div className="min-h-screen">
-      <NavigatieBalk rol={sessie.rol} />
+      <NavigatieBalk rol={context.rol} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 lg:py-10">{children}</div>
     </div>
   );

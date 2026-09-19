@@ -69,7 +69,7 @@ export async function registreer(_prevState: RegistreerState, formData: FormData
   // dan loggen we direct in. Staat bevestiging aan (aanbevolen, standaard),
   // dan is data.session leeg tot de gebruiker de link in zijn mail volgt.
   if (data.session) {
-    zetSessieCookie({ gebruikerId: profiel.id, gebruikersnaam: profiel.gebruikersnaam, rol: profiel.rol });
+    zetSessieCookie({ gebruikerId: profiel.user_id, gebruikersnaam: profiel.gebruikersnaam });
     return { fout: null, gelukt: true, wachtOpBevestiging: false };
   }
 

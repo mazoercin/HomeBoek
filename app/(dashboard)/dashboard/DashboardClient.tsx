@@ -24,6 +24,7 @@ import { VoorstellenSectie } from "@/components/dashboard/VoorstellenSectie";
 import { GrafiekenSectie } from "@/components/dashboard/GrafiekenSectie";
 import { GevarenZone } from "@/components/dashboard/GevarenZone";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
+import type { HouseholdRol } from "@/types/database";
 import {
   zetVasteKostBetaald,
   zetFactuurBetaald,
@@ -46,18 +47,20 @@ import {
   verwijderInvestering,
   voegInkomenToe,
   verwijderInkomen,
-  wisAlleData,
 } from "./actions";
+import { wisHouseholdData } from "@/app/gezin/actions";
 
 export function DashboardClient({
   data,
   huidigeMaand,
-  familienaam,
+  householdNaam,
+  rol,
   alleMaanden,
 }: {
   data: DashboardData;
   huidigeMaand: string;
-  familienaam: string | null;
+  householdNaam: string;
+  rol: HouseholdRol;
   alleMaanden: string[];
 }) {
   const [periode, setPeriode] = useState<Periode>(1);
@@ -139,7 +142,7 @@ export function DashboardClient({
     <div className="space-y-6 lg:space-y-8">
       <div>
         <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">
-          {familienaam ?? "Jullie"} <span className="text-primair">— Gezinsfinanciën</span>
+          {householdNaam} <span className="text-primair">— Gezinsfinanciën</span>
         </h1>
         <p className="text-sm text-tekst-secundair mt-0.5">Alles overzichtelijk op één plek.</p>
       </div>
@@ -289,9 +292,11 @@ export function DashboardClient({
         </ScrollReveal>
       )}
 
-      <ScrollReveal>
-        <GevarenZone onWissen={wisAlleData} />
-      </ScrollReveal>
+      {rol === "owner" && (
+        <ScrollReveal>
+          <GevarenZone onWissen={wisHouseholdData} />
+        </ScrollReveal>
+      )}
     </div>
   );
 }

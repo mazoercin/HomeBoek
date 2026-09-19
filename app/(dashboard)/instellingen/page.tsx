@@ -1,33 +1,37 @@
-import { requireRole } from "@/lib/auth/require-role";
+import { vereisHousehold } from "@/lib/auth/household";
 import { leesLogRegels } from "@/lib/logger.server";
-import { haalFamilienaam } from "@/lib/data/instellingen";
-import { lijstGebruikers } from "@/lib/auth/gebruiker";
+import { haalHouseholdOverzicht } from "@/lib/data/household";
 import { LogViewer } from "@/components/instellingen/LogViewer";
-import { FamilienaamKaart } from "@/components/instellingen/FamilienaamKaart";
-import { GebruikersBeheer } from "@/components/instellingen/GebruikersBeheer";
+import { HouseholdNaamKaart } from "@/components/instellingen/HouseholdNaamKaart";
+import { UitnodigenKaart } from "@/components/instellingen/UitnodigenKaart";
+import { LedenBeheer } from "@/components/instellingen/LedenBeheer";
+import { wisLogboek } from "./actions";
 import {
-  wisLogboek,
-  zetFamilienaam,
-  verwijderGebruiker,
-  stuurWachtwoordResetLink,
-  veranderWachtwoordVoorGebruiker,
-} from "./actions";
+  zetHouseholdInstellingen,
+  maakUitnodiging,
+  trekUitnodigingIn,
+  wijzigLidRol,
+  verwijderLid,
+  draagEigenaarschapOver,
+  verlaatHousehold,
+} from "@/app/gezin/actions";
 import { uitloggen } from "../logout-action";
 
 export const dynamic = "force-dynamic";
 
 export default async function InstellingenPagina() {
-  const sessie = requireRole("admin");
-  const [regels, familienaam, gebruikers] = await Promise.all([
-    leesLogRegels(200),
-    haalFamilienaam(),
-    lijstGebruikers(),
+  const context = await vereisHousehold();
+  const isOwner = context.rol === "owner";
+
+  const [overzicht, regels] = await Promise.all([
+    haalHouseholdOverzicht(context.householdId),
+    isOwner ? leesLogRegels(200) : Promise.resolve([]),
   ]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold tracking-tight">Instellingen</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">Gezin</h1>
         <form action={uitloggen}>
           <button type="submit" className="knop-secundair min-h-[40px] px-4 text-sm">
             Uitloggen
@@ -35,17 +39,32 @@ export default async function InstellingenPagina() {
         </form>
       </div>
 
-      <FamilienaamKaart huidigeNaam={familienaam} onOpslaan={zetFamilienaam} />
-
-      <GebruikersBeheer
-        gebruikers={gebruikers}
-        huidigeGebruikerId={sessie.gebruikerId}
-        onVerwijderen={verwijderGebruiker}
-        onResetLinkSturen={stuurWachtwoordResetLink}
-        onWachtwoordWijzigen={veranderWachtwoordVoorGebruiker}
+      <HouseholdNaamKaart
+        huidigeNaam={context.householdNaam}
+        huidigeCurrency={context.currency}
+        kanBewerken={isOwner}
+        onOpslaan={zetHouseholdInstellingen}
       />
 
-      <LogViewer regels={regels} onWissen={wisLogboek} />
+      {isOwner && (
+        <UitnodigenKaart
+          openstaandeUitnodigingen={overzicht.openstaandeUitnodigingen}
+          onAanmaken={maakUitnodiging}
+          onIntrekken={trekUitnodigingIn}
+        />
+      )}
+
+      <LedenBeheer
+        leden={overzicht.leden}
+        huidigeGebruikerId={context.gebruikerId}
+        isOwner={isOwner}
+        onRolWijzigen={wijzigLidRol}
+        onVerwijderen={verwijderLid}
+        onEigenaarschapOverdragen={draagEigenaarschapOver}
+        onVerlaten={verlaatHousehold}
+      />
+
+      {isOwner && <LogViewer regels={regels} onWissen={wisLogboek} />}
     </div>
   );
 }

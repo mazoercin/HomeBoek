@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { maakServiceClient } from "@/lib/supabase/server";
+import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
-import { requireSessie, requireRole } from "@/lib/auth/require-role";
+import { vereisHousehold } from "@/lib/auth/household";
 import type { Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
 
 function opnieuwValideren() {
@@ -11,13 +11,19 @@ function opnieuwValideren() {
   revalidatePath("/overzicht");
 }
 
+/**
+ * Voert een mutatie uit en geeft een nette foutmelding terug i.p.v. te
+ * crashen. De ECHTE toegangscontrole gebeurt in de database (RLS:
+ * is_member/can_edit) — probeert een viewer hier iets te schrijven, dan
+ * faalt de query met een Postgres-foutmelding die hier gewoon als
+ * "kon niet opslaan" naar de gebruiker terugkomt.
+ */
 async function veiligUitvoeren(
   code: string,
   bericht: string,
   context: Record<string, unknown>,
   actie: () => PromiseLike<{ error: { message: string } | null }>
 ): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  requireSessie();
   try {
     const { error } = await actie();
     if (error) {
@@ -36,34 +42,38 @@ async function veiligUitvoeren(
   }
 }
 
-// ---------- Betaald/geskipt-status (nu gewoon een kolom op de rij zelf) ----------
+// ---------- Betaald/geskipt-status (gewoon een kolom op de rij zelf) ----------
 
 export async function zetVasteKostBetaald(id: string, betaald: boolean) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon betaald-status van vaste kost niet bijwerken", { id, betaald }, () =>
-    supabase.from("vaste_kosten").update({ betaald }).eq("id", id)
+    supabase.from("vaste_kosten").update({ betaald }).eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 export async function zetFactuurBetaald(id: string, betaald: boolean) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon betaald-status van factuur niet bijwerken", { id, betaald }, () =>
-    supabase.from("facturen").update({ betaald }).eq("id", id)
+    supabase.from("facturen").update({ betaald }).eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 export async function zetExtraUitgaveGeskipt(id: string, geskipt: boolean) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon skip-status van extra uitgave niet bijwerken", { id, geskipt }, () =>
-    supabase.from("extra_uitgaven").update({ geskipt }).eq("id", id)
+    supabase.from("extra_uitgaven").update({ geskipt }).eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 /** "Wat als?"-toepassen: meerdere extra uitgaven in één keer op geskipt zetten. */
 export async function pasWatAlsToe(extraUitgaveIds: string[]) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon wat-als-keuze niet opslaan", { extraUitgaveIds }, () =>
-    supabase.from("extra_uitgaven").update({ geskipt: true }).in("id", extraUitgaveIds)
+    supabase.from("extra_uitgaven").update({ geskipt: true }).in("id", extraUitgaveIds).eq("household_id", context.householdId)
   );
 }
 
@@ -79,30 +89,34 @@ interface KostInvoer {
 }
 
 export async function voegVasteKostToe(data: KostInvoer, maand: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon vaste kost niet toevoegen", { data, maand }, () =>
-    supabase.from("vaste_kosten").insert({ ...data, maand })
+    supabase.from("vaste_kosten").insert({ ...data, maand, household_id: context.householdId })
   );
 }
 
 export async function verwijderVasteKost(id: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon vaste kost niet verwijderen", { id }, () =>
-    supabase.from("vaste_kosten").delete().eq("id", id)
+    supabase.from("vaste_kosten").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 export async function voegFactuurToe(data: KostInvoer, maand: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon factuur niet toevoegen", { data, maand }, () =>
-    supabase.from("facturen").insert({ ...data, maand })
+    supabase.from("facturen").insert({ ...data, maand, household_id: context.householdId })
   );
 }
 
 export async function verwijderFactuur(id: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon factuur niet verwijderen", { id }, () =>
-    supabase.from("facturen").delete().eq("id", id)
+    supabase.from("facturen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
 
@@ -112,16 +126,18 @@ export async function voegExtraUitgaveToe(
   data: { label: string; bedrag: number; overslaanbaar: boolean },
   maand: string
 ) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon extra uitgave niet toevoegen", { data, maand }, () =>
-    supabase.from("extra_uitgaven").insert({ ...data, maand })
+    supabase.from("extra_uitgaven").insert({ ...data, maand, household_id: context.householdId })
   );
 }
 
 export async function verwijderExtraUitgave(id: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon extra uitgave niet verwijderen", { id }, () =>
-    supabase.from("extra_uitgaven").delete().eq("id", id)
+    supabase.from("extra_uitgaven").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
 
@@ -133,29 +149,33 @@ export async function voegDoelToe(data: {
   maandelijks_bedrag: number;
   prioriteit: number;
 }) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon doel niet toevoegen", { data }, () =>
-    supabase.from("doelen").insert(data)
+    supabase.from("doelen").insert({ ...data, household_id: context.householdId })
   );
 }
 
 export async function verwijderDoel(id: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon doel niet verwijderen", { id }, () =>
-    supabase.from("doelen").delete().eq("id", id)
+    supabase.from("doelen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 export async function zetDoelGepauzeerd(id: string, gepauzeerd: boolean) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon doel niet pauzeren/hervatten", { id, gepauzeerd }, () =>
-    supabase.from("doelen").update({ gepauzeerd }).eq("id", id)
+    supabase.from("doelen").update({ gepauzeerd }).eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 /** Herschrijft de prioriteit van alle doelen in één keer op basis van hun nieuwe volgorde (sleep-en-neerzet). */
 export async function herschikDoelen(doelIdsInNieuweVolgorde: string[]) {
-  const supabase = maakServiceClient();
+  await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren(
     "DB_001",
     "Kon doelen niet herschikken",
@@ -167,9 +187,10 @@ export async function herschikDoelen(doelIdsInNieuweVolgorde: string[]) {
 // ---------- Investeringen ----------
 
 export async function voegInvesteringToe(naam: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon investering niet toevoegen", { naam }, () =>
-    supabase.from("investeringen").insert({ naam })
+    supabase.from("investeringen").insert({ naam, household_id: context.householdId })
   );
 }
 
@@ -179,23 +200,26 @@ export async function voegInvesteringTransactieToe(data: {
   datum: string;
   notitie: string | null;
 }) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon investering-transactie niet toevoegen", { data }, () =>
-    supabase.from("investering_transacties").insert(data)
+    supabase.from("investering_transacties").insert({ ...data, household_id: context.householdId })
   );
 }
 
 export async function hernoemInvestering(id: string, naam: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon investering niet hernoemen", { id, naam }, () =>
-    supabase.from("investeringen").update({ naam }).eq("id", id)
+    supabase.from("investeringen").update({ naam }).eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 export async function verwijderInvestering(id: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon investering niet verwijderen", { id }, () =>
-    supabase.from("investeringen").delete().eq("id", id)
+    supabase.from("investeringen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
 
@@ -208,9 +232,10 @@ export async function voegDoelBijdrageToe(data: {
   notitie: string | null;
   aftrekken_van_inkomen: boolean;
 }) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon doel-bijdrage niet toevoegen", { data }, () =>
-    supabase.from("doel_bijdragen").insert(data)
+    supabase.from("doel_bijdragen").insert({ ...data, household_id: context.householdId })
   );
 }
 
@@ -220,16 +245,18 @@ export async function voegInkomenToe(
   data: { bron: InkomenBron; label: string; bedrag: number; frequentie: InkomenFrequentie },
   maand: string
 ) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon inkomen niet toevoegen", { data, maand }, () =>
-    supabase.from("inkomen").insert({ ...data, maand })
+    supabase.from("inkomen").insert({ ...data, maand, household_id: context.householdId })
   );
 }
 
 export async function verwijderInkomen(id: string) {
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
   return veiligUitvoeren("DB_001", "Kon inkomen niet verwijderen", { id }, () =>
-    supabase.from("inkomen").delete().eq("id", id)
+    supabase.from("inkomen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
 
@@ -240,28 +267,30 @@ export async function verwijderInkomen(id: string) {
  * maand (alles opnieuw op onbetaald/niet-geskipt). Stuurt bewust NIET
  * zelf door: Next.js' client-side navigatie-cache bleek na een
  * redirect() vanuit een Server Action soms nog een verouderde versie
- * van de doelpagina te tonen (de net aangemaakte maand leek dan
- * "niet geregistreerd"). De aanroeper doet daarom zelf een volledige
- * page-navigatie zodra dit `gelukt: true` teruggeeft, wat elke
- * client-cache overslaat.
+ * van de doelpagina te tonen. De aanroeper doet daarom zelf een
+ * volledige page-navigatie zodra dit `gelukt: true` teruggeeft.
  */
 export async function registreerNieuweMaand(
   nieuweMaand: string,
   kopieerVan: string | null
 ): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  requireSessie();
-  const supabase = maakServiceClient();
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
 
   try {
     const { error } = kopieerVan
-      ? await supabase.rpc("kopieer_maand", { p_van_maand: kopieerVan, p_naar_maand: nieuweMaand })
-      : await supabase.rpc("registreer_maand", { p_maand: nieuweMaand });
+      ? await supabase.rpc("kopieer_maand", {
+          p_household_id: context.householdId,
+          p_van_maand: kopieerVan,
+          p_naar_maand: nieuweMaand,
+        })
+      : await supabase.rpc("registreer_maand", { p_household_id: context.householdId, p_maand: nieuweMaand });
 
     if (error) {
       logger.error({
         code: "DB_001",
         message: "Kon nieuwe maand niet registreren",
-        context: { nieuweMaand, kopieerVan, error: error.message },
+        context: { householdId: context.householdId, nieuweMaand, kopieerVan, error: error.message },
       });
       return { gelukt: false, foutmelding: "Kon de nieuwe maand niet aanmaken." };
     }
@@ -276,39 +305,4 @@ export async function registreerNieuweMaand(
 
   opnieuwValideren();
   return { gelukt: true };
-}
-
-// ---------- Gevarenzone ----------
-
-/**
- * Wist alle financiële data (inkomen, kosten, facturen, extra uitgaven,
- * doelen, investeringen, geregistreerde maanden) in één atomische
- * databasetransactie. Enkel toegankelijk voor de admin-rol — dit is
- * bewust zwaarder afgeschermd dan de gewone dashboard-mutaties, gezien
- * de onomkeerbare impact.
- */
-export async function wisAlleData(): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  requireRole("admin");
-  const supabase = maakServiceClient();
-
-  try {
-    const { error } = await supabase.rpc("wis_alle_data");
-    if (error) {
-      logger.error({
-        code: "DB_001",
-        message: "Kon alle data niet wissen",
-        context: { query: "wis_alle_data", error: error.message },
-      });
-      return { gelukt: false, foutmelding: "Kon de data niet wissen, probeer opnieuw." };
-    }
-    opnieuwValideren();
-    return { gelukt: true };
-  } catch (error) {
-    logger.error({
-      code: "DB_001",
-      message: "Onverwachte fout bij wissen van alle data",
-      context: { error: error instanceof Error ? error.message : String(error) },
-    });
-    return { gelukt: false, foutmelding: "Kon de data niet wissen, probeer opnieuw." };
-  }
 }

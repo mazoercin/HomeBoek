@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { haalDashboardData } from "@/lib/data/dashboard";
-import { haalFamilienaam } from "@/lib/data/instellingen";
 import { haalGeregistreerdeMaanden } from "@/lib/data/maanden";
+import { vereisHousehold } from "@/lib/auth/household";
 import { RegistreerMaandGate } from "@/components/dashboard/RegistreerMaandGate";
 import { DashboardClient } from "../DashboardClient";
 
@@ -16,10 +16,11 @@ export default async function DashboardMaandPagina({ params }: { params: { maand
   const { maand } = params;
   if (!MAAND_PATROON.test(maand)) notFound();
 
-  const [data, familienaam, geregistreerdeMaanden] = await Promise.all([
-    haalDashboardData(maand),
-    haalFamilienaam(),
-    haalGeregistreerdeMaanden(),
+  const context = await vereisHousehold();
+
+  const [data, geregistreerdeMaanden] = await Promise.all([
+    haalDashboardData(context.householdId, maand),
+    haalGeregistreerdeMaanden(context.householdId),
   ]);
 
   if (data.fout) {
@@ -45,7 +46,8 @@ export default async function DashboardMaandPagina({ params }: { params: { maand
     <DashboardClient
       data={data}
       huidigeMaand={maand}
-      familienaam={familienaam}
+      householdNaam={context.householdNaam}
+      rol={context.rol}
       alleMaanden={alleMaanden}
     />
   );

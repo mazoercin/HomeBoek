@@ -1,4 +1,4 @@
-import { maakServiceClient } from "@/lib/supabase/server";
+import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import type {
   Inkomen,
@@ -40,18 +40,21 @@ const LEEG: DashboardData = {
 
 /**
  * Haalt alle data op die het dashboard nodig heeft voor één specifieke
- * maand. Inkomen/vaste kosten/facturen/extra uitgaven horen nu elk bij
- * exact één maand (net als extra_inkomen al deed) — een andere maand
- * bekijken toont dus echt zijn eigen, onafhankelijke cijfers. Doelen en
- * investeringen blijven maand-onafhankelijk: dat zijn lange-termijn-
- * trackers met hun eigen gedateerde stortingsgeschiedenis.
+ * maand van één huishouden. Inkomen/vaste kosten/facturen/extra
+ * uitgaven horen bij exact één maand; doelen en investeringen blijven
+ * maand-onafhankelijk (lange-termijntrackers met eigen datumgeschiedenis).
+ *
+ * Gebruikt bewust de sessie-bewuste (anon-key) client, niet de
+ * service-role client: RLS (is_member/can_edit) is hier de échte
+ * toegangscontrole, de expliciete household_id-filter eronder is
+ * vooral voor efficiëntie en duidelijkheid.
  *
  * Bij een mislukte Supabase-call: DB_001 loggen en `fout: true`
  * teruggeven zodat de UI een vriendelijke foutmelding + "opnieuw
  * proberen" kan tonen in plaats van te crashen.
  */
-export async function haalDashboardData(maand: string): Promise<DashboardData> {
-  const supabase = maakServiceClient();
+export async function haalDashboardData(householdId: string, maand: string): Promise<DashboardData> {
+  const supabase = maakServerClient();
 
   try {
     const [
@@ -65,15 +68,19 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       investeringen,
       investeringTransacties,
     ] = await Promise.all([
-      supabase.from("inkomen").select("*").eq("maand", maand).order("created_at"),
-      supabase.from("extra_inkomen").select("*").eq("maand", maand),
-      supabase.from("vaste_kosten").select("*").eq("maand", maand).order("created_at"),
-      supabase.from("facturen").select("*").eq("maand", maand).order("created_at"),
-      supabase.from("extra_uitgaven").select("*").eq("maand", maand).order("created_at"),
-      supabase.from("doelen").select("*").order("prioriteit"),
-      supabase.from("doel_bijdragen").select("*").order("datum", { ascending: false }),
-      supabase.from("investeringen").select("*").order("created_at"),
-      supabase.from("investering_transacties").select("*").order("datum", { ascending: false }),
+      supabase.from("inkomen").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
+      supabase.from("extra_inkomen").select("*").eq("household_id", householdId).eq("maand", maand),
+      supabase.from("vaste_kosten").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
+      supabase.from("facturen").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
+      supabase.from("extra_uitgaven").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
+      supabase.from("doelen").select("*").eq("household_id", householdId).order("prioriteit"),
+      supabase.from("doel_bijdragen").select("*").eq("household_id", householdId).order("datum", { ascending: false }),
+      supabase.from("investeringen").select("*").eq("household_id", householdId).order("created_at"),
+      supabase
+        .from("investering_transacties")
+        .select("*")
+        .eq("household_id", householdId)
+        .order("datum", { ascending: false }),
     ]);
 
     const alleResultaten = [
@@ -93,7 +100,7 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       logger.error({
         code: "DB_001",
         message: "Kon dashboard-data niet volledig ophalen",
-        context: { maand, error: eersteFout.error.message },
+        context: { householdId, maand, error: eersteFout.error.message },
       });
       return { ...LEEG, fout: true };
     }
@@ -114,7 +121,7 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
     logger.error({
       code: "DB_001",
       message: "Onverwachte fout bij ophalen dashboard-data",
-      context: { maand, error: error instanceof Error ? error.message : String(error) },
+      context: { householdId, maand, error: error instanceof Error ? error.message : String(error) },
     });
     return { ...LEEG, fout: true };
   }

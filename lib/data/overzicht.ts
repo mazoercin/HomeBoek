@@ -1,4 +1,4 @@
-import { maakServiceClient } from "@/lib/supabase/server";
+import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import { berekenTotaalInkomen, berekenOpenstaandBedrag, berekenBijdragenAftrekVoorMaand } from "@/lib/calculations";
 import type { Inkomen, ExtraInkomen, VasteKost, Factuur, ExtraUitgave, DoelBijdrage } from "@/types/database";
@@ -21,24 +21,24 @@ function groepeerPerMaand<T extends { maand: string }>(items: T[]): Map<string, 
 }
 
 /**
- * Samenvatting (inkomen/uitgaven/saldo) per geregistreerde maand, voor
- * het jaaroverzicht — hergebruikt dezelfde rekenfuncties als het
- * dashboard zelf, gewoon per maand toegepast op alle data in één keer
- * i.p.v. N losse dashboard-fetches per maand.
+ * Samenvatting (inkomen/uitgaven/saldo) per geregistreerde maand van
+ * dit huishouden, voor het jaaroverzicht — hergebruikt dezelfde
+ * rekenfuncties als het dashboard zelf, gewoon per maand toegepast op
+ * alle data in één keer i.p.v. N losse dashboard-fetches per maand.
  */
-export async function haalMaandOverzicht(): Promise<{ maanden: MaandSamenvatting[]; fout: boolean }> {
-  const supabase = maakServiceClient();
+export async function haalMaandOverzicht(householdId: string): Promise<{ maanden: MaandSamenvatting[]; fout: boolean }> {
+  const supabase = maakServerClient();
 
   try {
     const [maandenRes, inkomenRes, extraInkomenRes, vasteKostenRes, facturenRes, extraUitgavenRes, doelBijdragenRes] =
       await Promise.all([
-        supabase.from("dashboard_maanden").select("*").order("maand"),
-        supabase.from("inkomen").select("*"),
-        supabase.from("extra_inkomen").select("*"),
-        supabase.from("vaste_kosten").select("*"),
-        supabase.from("facturen").select("*"),
-        supabase.from("extra_uitgaven").select("*"),
-        supabase.from("doel_bijdragen").select("*"),
+        supabase.from("dashboard_maanden").select("*").eq("household_id", householdId).order("maand"),
+        supabase.from("inkomen").select("*").eq("household_id", householdId),
+        supabase.from("extra_inkomen").select("*").eq("household_id", householdId),
+        supabase.from("vaste_kosten").select("*").eq("household_id", householdId),
+        supabase.from("facturen").select("*").eq("household_id", householdId),
+        supabase.from("extra_uitgaven").select("*").eq("household_id", householdId),
+        supabase.from("doel_bijdragen").select("*").eq("household_id", householdId),
       ]);
 
     const alleResultaten = [maandenRes, inkomenRes, extraInkomenRes, vasteKostenRes, facturenRes, extraUitgavenRes, doelBijdragenRes];
@@ -47,7 +47,7 @@ export async function haalMaandOverzicht(): Promise<{ maanden: MaandSamenvatting
       logger.error({
         code: "DB_001",
         message: "Kon maandoverzicht niet ophalen",
-        context: { error: eersteFout.error.message },
+        context: { householdId, error: eersteFout.error.message },
       });
       return { maanden: [], fout: true };
     }
@@ -80,7 +80,7 @@ export async function haalMaandOverzicht(): Promise<{ maanden: MaandSamenvatting
     logger.error({
       code: "DB_001",
       message: "Onverwachte fout bij ophalen maandoverzicht",
-      context: { error: error instanceof Error ? error.message : String(error) },
+      context: { householdId, error: error instanceof Error ? error.message : String(error) },
     });
     return { maanden: [], fout: true };
   }

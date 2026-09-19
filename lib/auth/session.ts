@@ -1,15 +1,19 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "crypto";
-import type { Rol } from "@/types/database";
 
 /**
  * Sessiebeheer via een handtekening-gecontroleerde httpOnly cookie.
  *
  * We bewaren geen server-side sessie-store (niet nodig voor dit
- * eenvoudige gezinssysteem): de cookie zelf bevat gebruikers-id + rol,
- * en is voorzien van een HMAC-handtekening (met SESSION_SECRET) zodat
- * de inhoud niet vervalst kan worden vanuit de browser. De cookie is
- * httpOnly zodat client-side JavaScript er nooit bij kan.
+ * eenvoudige gezinssysteem): de cookie zelf bevat enkel gebruikers-id +
+ * naam, en is voorzien van een HMAC-handtekening (met SESSION_SECRET)
+ * zodat de inhoud niet vervalst kan worden vanuit de browser. De cookie
+ * is httpOnly zodat client-side JavaScript er nooit bij kan.
+ *
+ * Rechten (owner/editor/viewer) staan bewust NIET in deze cookie —
+ * die zijn altijd per huishouden en worden live opgevraagd uit
+ * household_members (zie lib/auth/household.ts), zodat een rolwijziging
+ * door de eigenaar meteen ingaat i.p.v. pas na opnieuw inloggen.
  */
 
 const COOKIE_NAAM = "saldo_sessie";
@@ -18,7 +22,6 @@ const MAX_AGE_SECONDEN = 60 * 60 * 24 * 30; // 30 dagen
 export interface SessieData {
   gebruikerId: string;
   gebruikersnaam: string;
-  rol: Rol;
 }
 
 function ondertekening(payload: string): string {

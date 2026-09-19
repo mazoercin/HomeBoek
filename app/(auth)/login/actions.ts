@@ -65,9 +65,8 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   }
 
   zetSessieCookie({
-    gebruikerId: profiel.id,
+    gebruikerId: profiel.user_id,
     gebruikersnaam: profiel.gebruikersnaam,
-    rol: profiel.rol,
   });
 
   redirect("/dashboard");

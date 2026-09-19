@@ -4,15 +4,69 @@
  * `any` hoeven te gebruiken en een schema-wijziging op één plek zichtbaar is.
  */
 
-export type Rol = "admin" | "lid";
-
-export interface Gebruiker {
-  id: string;
+export interface Profiel {
+  user_id: string;
   email: string;
   gebruikersnaam: string;
-  rol: Rol;
+  avatar_color: string;
   created_at: string;
   updated_at: string;
+}
+
+/** Rol binnen één huishouden — vervangt de vroegere globale admin/lid-rol. */
+export type HouseholdRol = "owner" | "editor" | "viewer";
+
+export interface Household {
+  id: string;
+  name: string;
+  currency: string;
+  require_approval: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface HouseholdLid {
+  household_id: string;
+  user_id: string;
+  role: HouseholdRol;
+  display_name: string | null;
+  joined_at: string;
+  invited_by: string | null;
+}
+
+export interface HouseholdUitnodiging {
+  id: string;
+  household_id: string;
+  token_hash: string;
+  role: "editor" | "viewer";
+  email: string | null;
+  created_by: string;
+  created_at: string;
+  expires_at: string;
+  max_uses: number;
+  use_count: number;
+  revoked_at: string | null;
+}
+
+export interface ActiviteitLogRegel {
+  id: string;
+  household_id: string;
+  actor_id: string | null;
+  action: string;
+  entity: string;
+  entity_id: string | null;
+  summary: string;
+  created_at: string;
+}
+
+/** Gemeenschappelijke metadata-kolommen die elke budgettabel nu draagt (server-side via trigger gezet). */
+interface HuishoudenRij {
+  household_id: string;
+  created_by: string | null;
+  updated_by: string | null;
+  version: number;
 }
 
 /**
@@ -24,7 +78,7 @@ export type InkomenFrequentie = "wekelijks" | "maandelijks" | "3-maandelijks" | 
 
 export type InkomenBron = "zelf" | "partner" | "ander";
 
-export interface Inkomen {
+export interface Inkomen extends HuishoudenRij {
   id: string;
   bron: InkomenBron;
   label: string;
@@ -35,7 +89,7 @@ export interface Inkomen {
   updated_at: string;
 }
 
-export interface ExtraInkomen {
+export interface ExtraInkomen extends HuishoudenRij {
   id: string;
   label: string;
   bedrag: number;
@@ -54,7 +108,7 @@ export type Categorie =
   | "krediet"
   | "andere";
 
-export interface VasteKost {
+export interface VasteKost extends HuishoudenRij {
   id: string;
   label: string;
   bedrag: number;
@@ -68,7 +122,7 @@ export interface VasteKost {
   updated_at: string;
 }
 
-export interface Factuur {
+export interface Factuur extends HuishoudenRij {
   id: string;
   label: string;
   bedrag: number;
@@ -82,7 +136,7 @@ export interface Factuur {
   updated_at: string;
 }
 
-export interface ExtraUitgave {
+export interface ExtraUitgave extends HuishoudenRij {
   id: string;
   label: string;
   bedrag: number;
@@ -93,7 +147,7 @@ export interface ExtraUitgave {
   updated_at: string;
 }
 
-export interface Doel {
+export interface Doel extends HuishoudenRij {
   id: string;
   naam: string;
   target_bedrag: number;
@@ -104,13 +158,13 @@ export interface Doel {
   updated_at: string;
 }
 
-export interface Investering {
+export interface Investering extends HuishoudenRij {
   id: string;
   naam: string;
   created_at: string;
 }
 
-export interface InvesteringTransactie {
+export interface InvesteringTransactie extends HuishoudenRij {
   id: string;
   investering_id: string;
   bedrag: number;
@@ -119,7 +173,7 @@ export interface InvesteringTransactie {
   created_at: string;
 }
 
-export interface DoelBijdrage {
+export interface DoelBijdrage extends HuishoudenRij {
   id: string;
   doel_id: string;
   bedrag: number;
@@ -130,7 +184,7 @@ export interface DoelBijdrage {
   created_at: string;
 }
 
-export interface DashboardMaand {
+export interface DashboardMaand extends HuishoudenRij {
   maand: string; // YYYY-MM
   created_at: string;
 }

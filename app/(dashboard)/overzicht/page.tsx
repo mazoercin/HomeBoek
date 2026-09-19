@@ -1,5 +1,5 @@
 import { RotateCcw } from "lucide-react";
-import { requireSessie } from "@/lib/auth/require-role";
+import { vereisHousehold } from "@/lib/auth/household";
 import { haalMaandOverzicht } from "@/lib/data/overzicht";
 import { maandSleutel } from "@/lib/calculations/maand";
 import { OverzichtClient } from "@/components/overzicht/OverzichtClient";
@@ -7,8 +7,8 @@ import { OverzichtClient } from "@/components/overzicht/OverzichtClient";
 export const dynamic = "force-dynamic";
 
 export default async function OverzichtPagina() {
-  requireSessie();
-  const [{ maanden, fout }, vandaag] = [await haalMaandOverzicht(), maandSleutel(new Date())];
+  const context = await vereisHousehold();
+  const [{ maanden, fout }, vandaag] = [await haalMaandOverzicht(context.householdId), maandSleutel(new Date())];
 
   return (
     <div className="space-y-6">

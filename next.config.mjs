@@ -12,6 +12,18 @@ const nextConfig = {
       dynamic: 0,
     },
   },
+  async headers() {
+    return [
+      {
+        // De uitnodigingstoken zit enkel in het URL-fragment (nooit
+        // verstuurd naar de server), maar deze header voorkomt ook dat
+        // de volledige pagina-URL zelf via de Referer-header lekt naar
+        // een externe link vanaf deze pagina.
+        source: "/uitnodiging",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

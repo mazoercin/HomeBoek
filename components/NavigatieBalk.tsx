@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, CalendarDays, Settings, Menu, X, LogOut } from "lucide-react";
-import type { Rol } from "@/types/database";
+import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, CalendarDays, Users, Menu, X, LogOut } from "lucide-react";
+import type { HouseholdRol } from "@/types/database";
 import { Logo } from "@/components/ui/Logo";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 import { ThemaToggle } from "@/components/ui/ThemaToggle";
@@ -28,7 +28,7 @@ const MAAND_IN_PAD = /^\/dashboard\/(\d{4}-\d{2})/;
  * onderaan), en sluit meteen weer zodra je een link aantikt — de
  * pagina scrollt daarna vloeiend naar het juiste kader.
  */
-export function NavigatieBalk({ rol }: { rol: Rol }) {
+export function NavigatieBalk({ rol }: { rol: HouseholdRol }) {
   const [gescrold, setGescrold] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -53,7 +53,9 @@ export function NavigatieBalk({ rol }: { rol: Rol }) {
   const alleLinks = [
     ...LINKS.map((link) => ({ ...link, href: `${dashboardBasis}${link.pad}` })),
     { href: "/overzicht", label: "Overzicht", icoon: CalendarDays, pad: "" },
-    ...(rol === "admin" ? [{ href: "/instellingen", label: "Instellingen", icoon: Settings, pad: "" }] : []),
+    // `rol` bepaalt binnen de Gezin-pagina zelf welke acties zichtbaar
+    // zijn (rol wijzigen, uitnodigen, ...) — de link is voor elk lid nuttig.
+    { href: "/instellingen", label: "Gezin", icoon: Users, pad: "" },
   ];
 
   return (
