@@ -16,29 +16,37 @@ export function StartHouseholdForm() {
     setFout(null);
     const waarde = String(formData.get("naam") ?? "").trim();
     startTransition(async () => {
-      const res = await startNieuwHousehold(waarde);
-      if (!res.gelukt) {
-        setFout(res.foutmelding ?? "Kon niet opslaan.");
-        return;
-      }
-
-      // Had je al gegevens ingevuld in gast-modus (zonder account)? Zet
-      // die dan nu over naar je zonet aangemaakte huishouden — enkel de
-      // lokale kopie wissen als dat écht gelukt is, anders raak je niets
-      // kwijt en kan je het later gewoon opnieuw proberen. Dit is bewust
-      // best-effort: het huishouden bestaat op dit punt al, dus een fout
-      // hier (netwerk, onverwachte data, ...) mag de gebruiker nooit
-      // blokkeren — anders lijkt de knop het simpelweg niet te doen.
+      // Alles hierbinnen in try/catch: een onverwachte fout (bv. een
+      // netwerkhapering op mobiel) mag nooit stil de knop laten
+      // "vastlopen" zonder enige feedback — beter een foutmelding tonen
+      // dan niets laten gebeuren.
       try {
-        if (heeftGastData()) {
-          const importResultaat = await importeerGastData(bouwGastImportPayload(leesGastData()));
-          if (importResultaat.gelukt) wisGastData();
+        const res = await startNieuwHousehold(waarde);
+        if (!res.gelukt) {
+          setFout(res.foutmelding ?? "Kon niet opslaan.");
+          return;
         }
-      } catch (error) {
-        console.error("Kon gast-data niet overzetten:", error);
-      }
 
-      window.location.href = "/dashboard";
+        // Had je al gegevens ingevuld in gast-modus (zonder account)? Zet
+        // die dan nu over naar je zonet aangemaakte huishouden — enkel de
+        // lokale kopie wissen als dat écht gelukt is, anders raak je niets
+        // kwijt en kan je het later gewoon opnieuw proberen. Dit blijft
+        // bewust best-effort: het huishouden bestaat op dit punt al, dus
+        // een fout hier mag de gebruiker niet blokkeren.
+        try {
+          if (heeftGastData()) {
+            const importResultaat = await importeerGastData(bouwGastImportPayload(leesGastData()));
+            if (importResultaat.gelukt) wisGastData();
+          }
+        } catch (error) {
+          console.error("Kon gast-data niet overzetten:", error);
+        }
+
+        window.location.href = "/dashboard";
+      } catch (error) {
+        console.error("Kon huishouden niet starten:", error);
+        setFout("Er ging iets mis. Controleer je internetverbinding en probeer opnieuw.");
+      }
     });
   }
 
