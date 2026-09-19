@@ -6,13 +6,12 @@ import type { Voorstel } from "@/lib/calculations/types";
 
 interface Props {
   voorstellen: Voorstel[];
-  maand: string;
-  onSkipToepassen: (ids: string[], maand: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  onSkipToepassen: (ids: string[]) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onDoelPauzeren: (id: string, gepauzeerd: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
 }
 
 /** Rij 6: enkel zichtbaar bij rood saldo. Klikbare voorstellen vs. cursieve, niet-klikbare tips. */
-export function VoorstellenSectie({ voorstellen, maand, onSkipToepassen, onDoelPauzeren }: Props) {
+export function VoorstellenSectie({ voorstellen, onSkipToepassen, onDoelPauzeren }: Props) {
   const [isPending, startTransition] = useTransition();
 
   if (voorstellen.length === 0) return null;
@@ -21,7 +20,7 @@ export function VoorstellenSectie({ voorstellen, maand, onSkipToepassen, onDoelP
     if (!voorstel.itemId) return;
     startTransition(() => {
       if (voorstel.type === "pauzeer_uitgave") {
-        onSkipToepassen([voorstel.itemId!], maand);
+        onSkipToepassen([voorstel.itemId!]);
       } else if (voorstel.type === "pauzeer_doel") {
         onDoelPauzeren(voorstel.itemId!, true);
       }

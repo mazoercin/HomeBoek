@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { maakServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import { requireSessie, requireRole } from "@/lib/auth/require-role";
 import type { Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
 
 function opnieuwValideren() {
-  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/[maand]", "page");
+  revalidatePath("/overzicht");
 }
 
 async function veiligUitvoeren(
@@ -35,57 +37,34 @@ async function veiligUitvoeren(
   }
 }
 
-// ---------- Betaald-status ----------
+// ---------- Betaald/geskipt-status (nu gewoon een kolom op de rij zelf) ----------
 
-export async function zetVasteKostBetaald(vasteKostId: string, maand: string, betaald: boolean) {
+export async function zetVasteKostBetaald(id: string, betaald: boolean) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren(
-    "DB_001",
-    "Kon betaald-status van vaste kost niet bijwerken",
-    { vasteKostId, maand },
-    () => supabase.rpc("zet_vaste_kost_betaald", { p_vaste_kost_id: vasteKostId, p_maand: maand, p_betaald: betaald })
+  return veiligUitvoeren("DB_001", "Kon betaald-status van vaste kost niet bijwerken", { id, betaald }, () =>
+    supabase.from("vaste_kosten").update({ betaald }).eq("id", id)
   );
 }
 
-export async function zetFactuurBetaald(factuurId: string, maand: string, betaald: boolean) {
+export async function zetFactuurBetaald(id: string, betaald: boolean) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren(
-    "DB_001",
-    "Kon betaald-status van factuur niet bijwerken",
-    { factuurId, maand },
-    () => supabase.rpc("zet_factuur_betaald", { p_factuur_id: factuurId, p_maand: maand, p_betaald: betaald })
+  return veiligUitvoeren("DB_001", "Kon betaald-status van factuur niet bijwerken", { id, betaald }, () =>
+    supabase.from("facturen").update({ betaald }).eq("id", id)
   );
 }
 
-// ---------- Skip extra uitgave (wat-als toepassen) ----------
-
-export async function pasWatAlsToe(extraUitgaveIds: string[], maand: string) {
+export async function zetExtraUitgaveGeskipt(id: string, geskipt: boolean) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon wat-als-keuze niet opslaan", { extraUitgaveIds, maand }, async () => {
-    for (const id of extraUitgaveIds) {
-      const { error } = await supabase.rpc("zet_extra_uitgave_geskipt", {
-        p_extra_uitgave_id: id,
-        p_maand: maand,
-        p_geskipt: true,
-      });
-      if (error) return { error };
-    }
-    return { error: null };
-  });
+  return veiligUitvoeren("DB_001", "Kon skip-status van extra uitgave niet bijwerken", { id, geskipt }, () =>
+    supabase.from("extra_uitgaven").update({ geskipt }).eq("id", id)
+  );
 }
 
-export async function zetUitgaveNietGeskipt(extraUitgaveId: string, maand: string) {
+/** "Wat als?"-toepassen: meerdere extra uitgaven in één keer op geskipt zetten. */
+export async function pasWatAlsToe(extraUitgaveIds: string[]) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren(
-    "DB_001",
-    "Kon skip van extra uitgave niet ongedaan maken",
-    { extraUitgaveId, maand },
-    () =>
-      supabase.rpc("zet_extra_uitgave_geskipt", {
-        p_extra_uitgave_id: extraUitgaveId,
-        p_maand: maand,
-        p_geskipt: false,
-      })
+  return veiligUitvoeren("DB_001", "Kon wat-als-keuze niet opslaan", { extraUitgaveIds }, () =>
+    supabase.from("extra_uitgaven").update({ geskipt: true }).in("id", extraUitgaveIds)
   );
 }
 
@@ -100,10 +79,10 @@ interface KostInvoer {
   eind_datum: string | null;
 }
 
-export async function voegVasteKostToe(data: KostInvoer) {
+export async function voegVasteKostToe(data: KostInvoer, maand: string) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon vaste kost niet toevoegen", { data }, () =>
-    supabase.from("vaste_kosten").insert(data)
+  return veiligUitvoeren("DB_001", "Kon vaste kost niet toevoegen", { data, maand }, () =>
+    supabase.from("vaste_kosten").insert({ ...data, maand })
   );
 }
 
@@ -114,10 +93,10 @@ export async function verwijderVasteKost(id: string) {
   );
 }
 
-export async function voegFactuurToe(data: KostInvoer) {
+export async function voegFactuurToe(data: KostInvoer, maand: string) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon factuur niet toevoegen", { data }, () =>
-    supabase.from("facturen").insert(data)
+  return veiligUitvoeren("DB_001", "Kon factuur niet toevoegen", { data, maand }, () =>
+    supabase.from("facturen").insert({ ...data, maand })
   );
 }
 
@@ -130,10 +109,13 @@ export async function verwijderFactuur(id: string) {
 
 // ---------- Extra uitgaven CRUD ----------
 
-export async function voegExtraUitgaveToe(data: { label: string; bedrag: number; overslaanbaar: boolean }) {
+export async function voegExtraUitgaveToe(
+  data: { label: string; bedrag: number; overslaanbaar: boolean },
+  maand: string
+) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon extra uitgave niet toevoegen", { data }, () =>
-    supabase.from("extra_uitgaven").insert(data)
+  return veiligUitvoeren("DB_001", "Kon extra uitgave niet toevoegen", { data, maand }, () =>
+    supabase.from("extra_uitgaven").insert({ ...data, maand })
   );
 }
 
@@ -235,15 +217,13 @@ export async function voegDoelBijdrageToe(data: {
 
 // ---------- Inkomen ----------
 
-export async function voegInkomenToe(data: {
-  bron: InkomenBron;
-  label: string;
-  bedrag: number;
-  frequentie: InkomenFrequentie;
-}) {
+export async function voegInkomenToe(
+  data: { bron: InkomenBron; label: string; bedrag: number; frequentie: InkomenFrequentie },
+  maand: string
+) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon inkomen niet toevoegen", { data }, () =>
-    supabase.from("inkomen").insert(data)
+  return veiligUitvoeren("DB_001", "Kon inkomen niet toevoegen", { data, maand }, () =>
+    supabase.from("inkomen").insert({ ...data, maand })
   );
 }
 
@@ -254,13 +234,51 @@ export async function verwijderInkomen(id: string) {
   );
 }
 
+// ---------- Maanden ----------
+
+/**
+ * Registreert een nieuwe maand — leeg, of gekopieerd van een bestaande
+ * maand (alles opnieuw op onbetaald/niet-geskipt) — en stuurt meteen
+ * door naar het dashboard van die nieuwe maand.
+ */
+export async function registreerNieuweMaand(nieuweMaand: string, kopieerVan: string | null) {
+  requireSessie();
+  const supabase = maakServiceClient();
+
+  try {
+    const { error } = kopieerVan
+      ? await supabase.rpc("kopieer_maand", { p_van_maand: kopieerVan, p_naar_maand: nieuweMaand })
+      : await supabase.rpc("registreer_maand", { p_maand: nieuweMaand });
+
+    if (error) {
+      logger.error({
+        code: "DB_001",
+        message: "Kon nieuwe maand niet registreren",
+        context: { nieuweMaand, kopieerVan, error: error.message },
+      });
+      return { gelukt: false, foutmelding: "Kon de nieuwe maand niet aanmaken." };
+    }
+  } catch (error) {
+    logger.error({
+      code: "DB_001",
+      message: "Onverwachte fout bij registreren van nieuwe maand",
+      context: { nieuweMaand, kopieerVan, error: error instanceof Error ? error.message : String(error) },
+    });
+    return { gelukt: false, foutmelding: "Kon de nieuwe maand niet aanmaken." };
+  }
+
+  opnieuwValideren();
+  redirect(`/dashboard/${nieuweMaand}`);
+}
+
 // ---------- Gevarenzone ----------
 
 /**
  * Wist alle financiële data (inkomen, kosten, facturen, extra uitgaven,
- * doelen, goud) in één atomische databasetransactie. Enkel toegankelijk
- * voor de admin-rol — dit is bewust zwaarder afgeschermd dan de gewone
- * dashboard-mutaties, gezien de onomkeerbare impact.
+ * doelen, investeringen, geregistreerde maanden) in één atomische
+ * databasetransactie. Enkel toegankelijk voor de admin-rol — dit is
+ * bewust zwaarder afgeschermd dan de gewone dashboard-mutaties, gezien
+ * de onomkeerbare impact.
  */
 export async function wisAlleData(): Promise<{ gelukt: boolean; foutmelding?: string }> {
   requireRole("admin");

@@ -4,7 +4,6 @@ import type { Voorstel } from "./types";
 export interface VoorstellenInput {
   tekort: number; // positief getal = hoeveel er tekort is
   extraUitgaven: ExtraUitgave[];
-  geskipteUitgaveIds: string[];
   doelen: Doel[];
   vasteKosten: VasteKost[];
   facturen: Factuur[];
@@ -26,7 +25,7 @@ export function genereerVoorstellenBijTekort(input: VoorstellenInput): Voorstel[
   const voorstellen: Voorstel[] = [];
 
   const pauzeerbareUitgaven = input.extraUitgaven
-    .filter((u) => u.overslaanbaar && !input.geskipteUitgaveIds.includes(u.id))
+    .filter((u) => u.overslaanbaar && !u.geskipt)
     .sort((a, b) => b.bedrag - a.bedrag);
 
   for (const uitgave of pauzeerbareUitgaven) {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, Settings, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, CalendarDays, Settings, Menu, X, LogOut } from "lucide-react";
 import type { Rol } from "@/types/database";
 import { Logo } from "@/components/ui/Logo";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
@@ -11,12 +11,14 @@ import { ThemaToggle } from "@/components/ui/ThemaToggle";
 import { uitloggen } from "@/app/(dashboard)/logout-action";
 
 const LINKS = [
-  { href: "/dashboard", label: "Dashboard", icoon: LayoutDashboard },
-  { href: "/dashboard#inkomen", label: "Inkomen", icoon: Wallet },
-  { href: "/dashboard#uitgaven", label: "Uitgaven", icoon: Receipt },
-  { href: "/dashboard#doelen", label: "Spaarpot", icoon: Target },
-  { href: "/dashboard#investeringen", label: "Investeringen", icoon: TrendingUp },
+  { pad: "", label: "Dashboard", icoon: LayoutDashboard },
+  { pad: "#inkomen", label: "Inkomen", icoon: Wallet },
+  { pad: "#uitgaven", label: "Uitgaven", icoon: Receipt },
+  { pad: "#doelen", label: "Spaarpot", icoon: Target },
+  { pad: "#investeringen", label: "Investeringen", icoon: TrendingUp },
 ];
+
+const MAAND_IN_PAD = /^\/dashboard\/(\d{4}-\d{2})/;
 
 /**
  * Eén dunne, vaste kopbalk met het HomeBoek-logo, altijd zichtbaar.
@@ -45,12 +47,19 @@ export function NavigatieBalk({ rol }: { rol: Rol }) {
     setMenuOpen(false);
   }, [pathname]);
 
-  const alleLinks = rol === "admin" ? [...LINKS, { href: "/instellingen", label: "Instellingen", icoon: Settings }] : LINKS;
+  const maandMatch = pathname.match(MAAND_IN_PAD);
+  const dashboardBasis = maandMatch ? `/dashboard/${maandMatch[1]}` : "/dashboard";
+
+  const alleLinks = [
+    ...LINKS.map((link) => ({ ...link, href: `${dashboardBasis}${link.pad}` })),
+    { href: "/overzicht", label: "Overzicht", icoon: CalendarDays, pad: "" },
+    ...(rol === "admin" ? [{ href: "/instellingen", label: "Instellingen", icoon: Settings, pad: "" }] : []),
+  ];
 
   return (
     <header className={`sticky top-0 z-30 transition-all duration-300 ${gescrold || menuOpen ? "navbalk-scrolled" : "navbalk-boven"}`}>
       <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-10 h-14 flex items-center justify-between">
-        <Link href="/dashboard" className="transition-opacity hover:opacity-80">
+        <Link href={dashboardBasis} className="transition-opacity hover:opacity-80">
           <Logo compact />
         </Link>
 

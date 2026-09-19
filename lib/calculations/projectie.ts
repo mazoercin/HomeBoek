@@ -27,13 +27,10 @@ export interface PeriodeProjectieInput {
 
 /**
  * Periode-projectie: voor 1/3/6/12 maanden vooruit, saldo per maand
- * o.b.v. de HUIDIGE vaste/flexibele inkomsten en uitgaven, met
- * eind_datum correct verrekend (kost stopt mee te tellen na die maand-
- * markering). Eenmalige/variabele posten van de huidige maand (extra
- * inkomen) tellen NIET automatisch mee in toekomstige maanden — dat
- * zou een verkeerd beeld geven. Extra uitgaven zijn per definitie
- * terugkerend en tellen dus wel in elke toekomstige maand mee (er is
- * daar nog geen skip-beslissing voor genomen).
+ * als hypothese "wat als de bekeken maand zo blijft doorlopen" —
+ * gebaseerd op de items van de bekeken maand zelf. Eenmalige/variabele
+ * posten van die maand (extra inkomen) tellen NIET automatisch mee in
+ * toekomstige maanden — dat zou een verkeerd beeld geven.
  */
 export function berekenPeriodeProjectie(input: PeriodeProjectieInput): MaandProjectie[] {
   const resultaat: MaandProjectie[] = [];
@@ -55,8 +52,6 @@ export function berekenPeriodeProjectie(input: PeriodeProjectieInput): MaandProj
         vasteKosten: input.vasteKosten,
         facturen: input.facturen,
         extraUitgaven: input.extraUitgaven,
-        geskipteUitgaveIds: [], // toekomstige maanden: nog geen skip-keuze gemaakt
-        maand,
       });
 
       resultaat.push({ maand, inkomen, uitgaven, saldo: inkomen - uitgaven });

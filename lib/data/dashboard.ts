@@ -4,11 +4,8 @@ import type {
   Inkomen,
   ExtraInkomen,
   VasteKost,
-  VasteKostBetaald,
   Factuur,
-  FactuurBetaald,
   ExtraUitgave,
-  GeskipteUitgave,
   Doel,
   DoelBijdrage,
   Investering,
@@ -19,11 +16,8 @@ export interface DashboardData {
   inkomen: Inkomen[];
   extraInkomen: ExtraInkomen[];
   vasteKosten: VasteKost[];
-  vasteKostenBetaald: VasteKostBetaald[];
   facturen: Factuur[];
-  facturenBetaald: FactuurBetaald[];
   extraUitgaven: ExtraUitgave[];
-  geskipteUitgaven: GeskipteUitgave[];
   doelen: Doel[];
   doelBijdragen: DoelBijdrage[];
   investeringen: Investering[];
@@ -35,11 +29,8 @@ const LEEG: DashboardData = {
   inkomen: [],
   extraInkomen: [],
   vasteKosten: [],
-  vasteKostenBetaald: [],
   facturen: [],
-  facturenBetaald: [],
   extraUitgaven: [],
-  geskipteUitgaven: [],
   doelen: [],
   doelBijdragen: [],
   investeringen: [],
@@ -48,7 +39,13 @@ const LEEG: DashboardData = {
 };
 
 /**
- * Haalt alle data op die het dashboard nodig heeft voor één maand.
+ * Haalt alle data op die het dashboard nodig heeft voor één specifieke
+ * maand. Inkomen/vaste kosten/facturen/extra uitgaven horen nu elk bij
+ * exact één maand (net als extra_inkomen al deed) — een andere maand
+ * bekijken toont dus echt zijn eigen, onafhankelijke cijfers. Doelen en
+ * investeringen blijven maand-onafhankelijk: dat zijn lange-termijn-
+ * trackers met hun eigen gedateerde stortingsgeschiedenis.
+ *
  * Bij een mislukte Supabase-call: DB_001 loggen en `fout: true`
  * teruggeven zodat de UI een vriendelijke foutmelding + "opnieuw
  * proberen" kan tonen in plaats van te crashen.
@@ -61,24 +58,18 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       inkomen,
       extraInkomen,
       vasteKosten,
-      vasteKostenBetaald,
       facturen,
-      facturenBetaald,
       extraUitgaven,
-      geskipteUitgaven,
       doelen,
       doelBijdragen,
       investeringen,
       investeringTransacties,
     ] = await Promise.all([
-      supabase.from("inkomen").select("*").order("created_at"),
+      supabase.from("inkomen").select("*").eq("maand", maand).order("created_at"),
       supabase.from("extra_inkomen").select("*").eq("maand", maand),
-      supabase.from("vaste_kosten").select("*").order("created_at"),
-      supabase.from("vaste_kosten_betaald").select("*").eq("maand", maand),
-      supabase.from("facturen").select("*").order("created_at"),
-      supabase.from("facturen_betaald").select("*").eq("maand", maand),
-      supabase.from("extra_uitgaven").select("*").order("created_at"),
-      supabase.from("geskipte_uitgaven").select("*").eq("maand", maand),
+      supabase.from("vaste_kosten").select("*").eq("maand", maand).order("created_at"),
+      supabase.from("facturen").select("*").eq("maand", maand).order("created_at"),
+      supabase.from("extra_uitgaven").select("*").eq("maand", maand).order("created_at"),
       supabase.from("doelen").select("*").order("prioriteit"),
       supabase.from("doel_bijdragen").select("*").order("datum", { ascending: false }),
       supabase.from("investeringen").select("*").order("created_at"),
@@ -89,11 +80,8 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       inkomen,
       extraInkomen,
       vasteKosten,
-      vasteKostenBetaald,
       facturen,
-      facturenBetaald,
       extraUitgaven,
-      geskipteUitgaven,
       doelen,
       doelBijdragen,
       investeringen,
@@ -114,11 +102,8 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       inkomen: inkomen.data ?? [],
       extraInkomen: extraInkomen.data ?? [],
       vasteKosten: vasteKosten.data ?? [],
-      vasteKostenBetaald: vasteKostenBetaald.data ?? [],
       facturen: facturen.data ?? [],
-      facturenBetaald: facturenBetaald.data ?? [],
       extraUitgaven: extraUitgaven.data ?? [],
-      geskipteUitgaven: geskipteUitgaven.data ?? [],
       doelen: doelen.data ?? [],
       doelBijdragen: doelBijdragen.data ?? [],
       investeringen: investeringen.data ?? [],

@@ -18,9 +18,7 @@ interface Props {
   ankerId: string;
   stapTip: { nummer: number; titel: string; uitleg: string; voorbeeld: string };
   items: Kost[];
-  betaaldMap: Record<string, boolean>;
-  maand: string;
-  onZetBetaald: (id: string, maand: string, betaald: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  onZetBetaald: (id: string, betaald: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onToevoegen: (data: {
     label: string;
     bedrag: number;
@@ -35,17 +33,7 @@ interface Props {
 const CATEGORIEEN = Object.keys(CATEGORIE_INFO) as Categorie[];
 
 /** Herbruikbaar kader voor vaste kosten én facturen — zelfde structuur en gedrag. */
-export function KostenKader({
-  titel,
-  ankerId,
-  stapTip,
-  items,
-  betaaldMap,
-  maand,
-  onZetBetaald,
-  onToevoegen,
-  onVerwijderen,
-}: Props) {
+export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onToevoegen, onVerwijderen }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -102,7 +90,7 @@ export function KostenKader({
       <ul className="space-y-2 mb-2">
         {zichtbareItems.map((item) => {
           const info = categorieInfo(item.categorie);
-          const betaald = betaaldMap[item.id] ?? false;
+          const betaald = item.betaald;
           return (
             <li
               key={item.id}
@@ -123,7 +111,7 @@ export function KostenKader({
                 disabled={isPending}
                 onWijzig={() =>
                   startTransition(async () => {
-                    await onZetBetaald(item.id, maand, !betaald);
+                    await onZetBetaald(item.id, !betaald);
                   })
                 }
               />

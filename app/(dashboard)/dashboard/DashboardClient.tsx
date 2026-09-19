@@ -12,6 +12,7 @@ import {
   genereerVoorstellenBijTekort,
 } from "@/lib/calculations";
 import { PeriodeSelector, type Periode } from "@/components/dashboard/PeriodeSelector";
+import { MaandKop } from "@/components/dashboard/MaandKop";
 import { SamenvattingKaarten } from "@/components/dashboard/SamenvattingKaarten";
 import { InkomenSectie } from "@/components/dashboard/InkomenSectie";
 import { KostenKader } from "@/components/dashboard/KostenKader";
@@ -26,8 +27,8 @@ import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import {
   zetVasteKostBetaald,
   zetFactuurBetaald,
+  zetExtraUitgaveGeskipt,
   pasWatAlsToe,
-  zetUitgaveNietGeskipt,
   voegVasteKostToe,
   verwijderVasteKost,
   voegFactuurToe,
@@ -52,14 +53,14 @@ export function DashboardClient({
   data,
   huidigeMaand,
   familienaam,
+  alleMaanden,
 }: {
   data: DashboardData;
   huidigeMaand: string;
   familienaam: string | null;
+  alleMaanden: string[];
 }) {
   const [periode, setPeriode] = useState<Periode>(1);
-
-  const geskipteIds = useMemo(() => data.geskipteUitgaven.map((g) => g.extra_uitgave_id), [data]);
 
   const projectie = useMemo(
     () =>
@@ -76,13 +77,13 @@ export function DashboardClient({
     [data, huidigeMaand, periode]
   );
 
-  // Rij 1: som over de geselecteerde periode (bij 1 maand = gewoon de huidige maand).
+  // Rij 1: som over de geselecteerde periode (bij 1 maand = gewoon de bekeken maand).
   const totaalInkomen = useMemo(() => projectie.reduce((s, m) => s + m.inkomen, 0), [projectie]);
   const openstaandBedrag = useMemo(() => projectie.reduce((s, m) => s + m.uitgaven, 0), [projectie]);
   const watOverblijft = berekenWatOverblijft(totaalInkomen, openstaandBedrag);
 
-  // Huidige-maand cijfers (ongeacht periode) — nodig voor de wat-als-simulatie en tekort-voorstellen,
-  // die altijd over "deze maand" gaan.
+  // Cijfers van de bekeken maand zelf (ongeacht periode) — nodig voor de
+  // wat-als-simulatie en tekort-voorstellen, die altijd over die ene maand gaan.
   const inkomenHuidigeMaand = useMemo(
     () =>
       berekenTotaalInkomen({
@@ -98,73 +99,36 @@ export function DashboardClient({
         vasteKosten: data.vasteKosten,
         facturen: data.facturen,
         extraUitgaven: data.extraUitgaven,
-        geskipteUitgaveIds: geskipteIds,
-        maand: huidigeMaand,
       }),
-    [data, geskipteIds, huidigeMaand]
+    [data]
   );
   const watOverblijftHuidigeMaand = berekenWatOverblijft(inkomenHuidigeMaand, uitgavenHuidigeMaand);
 
   // Betaald/nog-te-betalen-opsplitsing geldt enkel voor vaste kosten + facturen
-  // (extra uitgaven hebben geen betaald-status) en altijd voor de HUIDIGE maand,
-  // ongeacht de gekozen periode — betaald-status bestaat nu eenmaal per maand.
-  const kostenMetBetaalStatusHuidigeMaand = useMemo(
-    () =>
-      berekenOpenstaandBedrag({
-        vasteKosten: data.vasteKosten,
-        facturen: data.facturen,
-        extraUitgaven: [],
-        geskipteUitgaveIds: [],
-        maand: huidigeMaand,
-      }),
-    [data, huidigeMaand]
+  // (extra uitgaven hebben geen betaald-status).
+  const kostenMetBetaalStatus = useMemo(
+    () => berekenOpenstaandBedrag({ vasteKosten: data.vasteKosten, facturen: data.facturen, extraUitgaven: [] }),
+    [data]
   );
   const nogTeBetalenHuidigeMaand = useMemo(
-    () =>
-      berekenNogTeBetalen({
-        vasteKosten: data.vasteKosten,
-        facturen: data.facturen,
-        extraUitgaven: [],
-        geskipteUitgaveIds: [],
-        maand: huidigeMaand,
-        vasteKostenBetaald: data.vasteKostenBetaald.map((s) => ({
-          itemId: s.vaste_kost_id,
-          maand: s.maand,
-          betaald: s.betaald,
-        })),
-        facturenBetaald: data.facturenBetaald.map((s) => ({
-          itemId: s.factuur_id,
-          maand: s.maand,
-          betaald: s.betaald,
-        })),
-      }),
-    [data, huidigeMaand]
+    () => berekenNogTeBetalen({ vasteKosten: data.vasteKosten, facturen: data.facturen }),
+    [data]
   );
-  const betaaldHuidigeMaand = kostenMetBetaalStatusHuidigeMaand - nogTeBetalenHuidigeMaand;
+  const betaaldHuidigeMaand = kostenMetBetaalStatus - nogTeBetalenHuidigeMaand;
   // Vaste kosten + facturen van deze maand, ongeacht betaald-status en
   // ongeacht de gekozen periode-tab — dit blijft altijd "deze maand".
-  const totaalOpenstaandHuidigeMaand = kostenMetBetaalStatusHuidigeMaand;
+  const totaalOpenstaandHuidigeMaand = kostenMetBetaalStatus;
 
   const voorstellen = useMemo(() => {
     if (watOverblijftHuidigeMaand >= 0) return [];
     return genereerVoorstellenBijTekort({
       tekort: Math.abs(watOverblijftHuidigeMaand),
       extraUitgaven: data.extraUitgaven,
-      geskipteUitgaveIds: geskipteIds,
       doelen: data.doelen,
       vasteKosten: data.vasteKosten,
       facturen: data.facturen,
     });
-  }, [watOverblijftHuidigeMaand, data, geskipteIds]);
-
-  const vasteKostenBetaaldMap = useMemo(
-    () => Object.fromEntries(data.vasteKostenBetaald.map((s) => [s.vaste_kost_id, s.betaald])),
-    [data]
-  );
-  const facturenBetaaldMap = useMemo(
-    () => Object.fromEntries(data.facturenBetaald.map((s) => [s.factuur_id, s.betaald])),
-    [data]
-  );
+  }, [watOverblijftHuidigeMaand, data]);
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -174,6 +138,10 @@ export function DashboardClient({
         </h1>
         <p className="text-sm text-tekst-secundair mt-0.5">Alles overzichtelijk op één plek.</p>
       </div>
+
+      <ScrollReveal>
+        <MaandKop huidigeMaand={huidigeMaand} alleMaanden={alleMaanden} />
+      </ScrollReveal>
 
       <PeriodeSelector waarde={periode} onWijzig={setPeriode} />
 
@@ -221,14 +189,18 @@ export function DashboardClient({
           inkomen={data.inkomen}
           vasteKosten={data.vasteKosten}
           extraUitgaven={data.extraUitgaven}
-          onInkomenToevoegen={voegInkomenToe}
-          onVasteKostToevoegen={voegVasteKostToe}
-          onExtraUitgaveToevoegen={voegExtraUitgaveToe}
+          onInkomenToevoegen={(d) => voegInkomenToe(d, huidigeMaand)}
+          onVasteKostToevoegen={(d) => voegVasteKostToe(d, huidigeMaand)}
+          onExtraUitgaveToevoegen={(d) => voegExtraUitgaveToe(d, huidigeMaand)}
         />
       </ScrollReveal>
 
       <ScrollReveal>
-        <InkomenSectie items={data.inkomen} onToevoegen={voegInkomenToe} onVerwijderen={verwijderInkomen} />
+        <InkomenSectie
+          items={data.inkomen}
+          onToevoegen={(d) => voegInkomenToe(d, huidigeMaand)}
+          onVerwijderen={verwijderInkomen}
+        />
       </ScrollReveal>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
@@ -243,10 +215,8 @@ export function DashboardClient({
               voorbeeld: "Huur — €1750,00",
             }}
             items={data.vasteKosten}
-            betaaldMap={vasteKostenBetaaldMap}
-            maand={huidigeMaand}
             onZetBetaald={zetVasteKostBetaald}
-            onToevoegen={voegVasteKostToe}
+            onToevoegen={(d) => voegVasteKostToe(d, huidigeMaand)}
             onVerwijderen={verwijderVasteKost}
           />
         </ScrollReveal>
@@ -261,23 +231,17 @@ export function DashboardClient({
               voorbeeld: "Elektriciteit — €120,00",
             }}
             items={data.facturen}
-            betaaldMap={facturenBetaaldMap}
-            maand={huidigeMaand}
             onZetBetaald={zetFactuurBetaald}
-            onToevoegen={voegFactuurToe}
+            onToevoegen={(d) => voegFactuurToe(d, huidigeMaand)}
             onVerwijderen={verwijderFactuur}
           />
         </ScrollReveal>
         <ScrollReveal vertraging={160}>
           <ExtraUitgavenKader
             items={data.extraUitgaven}
-            geskipteIds={geskipteIds}
-            maand={huidigeMaand}
-            onToevoegen={voegExtraUitgaveToe}
+            onToevoegen={(d) => voegExtraUitgaveToe(d, huidigeMaand)}
             onVerwijderen={verwijderExtraUitgave}
-            onZetGeskipt={(id, maand, geskipt) =>
-              geskipt ? pasWatAlsToe([id], maand) : zetUitgaveNietGeskipt(id, maand)
-            }
+            onZetGeskipt={zetExtraUitgaveGeskipt}
           />
         </ScrollReveal>
       </div>
@@ -285,9 +249,7 @@ export function DashboardClient({
       <ScrollReveal>
         <WatAlsKader
           overslaanbareUitgaven={data.extraUitgaven.filter((u) => u.overslaanbaar)}
-          geskipteIds={geskipteIds}
           huidigWatOverblijft={watOverblijftHuidigeMaand}
-          maand={huidigeMaand}
           onToepassen={pasWatAlsToe}
         />
       </ScrollReveal>
@@ -319,12 +281,7 @@ export function DashboardClient({
 
       {watOverblijftHuidigeMaand < 0 && (
         <ScrollReveal>
-          <VoorstellenSectie
-            voorstellen={voorstellen}
-            maand={huidigeMaand}
-            onSkipToepassen={pasWatAlsToe}
-            onDoelPauzeren={zetDoelGepauzeerd}
-          />
+          <VoorstellenSectie voorstellen={voorstellen} onSkipToepassen={pasWatAlsToe} onDoelPauzeren={zetDoelGepauzeerd} />
         </ScrollReveal>
       )}
 

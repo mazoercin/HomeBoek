@@ -30,6 +30,7 @@ export interface Inkomen {
   label: string;
   bedrag: number;
   frequentie: InkomenFrequentie;
+  maand: string; // YYYY-MM — elke maand heeft zijn eigen, onafhankelijke inkomenslijst
   created_at: string;
   updated_at: string;
 }
@@ -61,13 +62,6 @@ export interface VasteKost {
   icoon: string;
   vervaldag: number | null; // 1-31
   eind_datum: string | null; // YYYY-MM-DD
-  created_at: string;
-  updated_at: string;
-}
-
-export interface VasteKostBetaald {
-  id: string;
-  vaste_kost_id: string;
   maand: string; // YYYY-MM
   betaald: boolean;
   created_at: string;
@@ -82,14 +76,7 @@ export interface Factuur {
   icoon: string;
   vervaldag: number | null;
   eind_datum: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FactuurBetaald {
-  id: string;
-  factuur_id: string;
-  maand: string;
+  maand: string; // YYYY-MM
   betaald: boolean;
   created_at: string;
   updated_at: string;
@@ -100,15 +87,10 @@ export interface ExtraUitgave {
   label: string;
   bedrag: number;
   overslaanbaar: boolean;
+  maand: string; // YYYY-MM
+  geskipt: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface GeskipteUitgave {
-  id: string;
-  extra_uitgave_id: string;
-  maand: string; // YYYY-MM
-  created_at: string;
 }
 
 export interface Doel {
@@ -145,6 +127,11 @@ export interface DoelBijdrage {
   notitie: string | null;
   /** Telt dit bedrag mee als afgetrokken van het inkomen van de maand van `datum`? */
   aftrekken_van_inkomen: boolean;
+  created_at: string;
+}
+
+export interface DashboardMaand {
+  maand: string; // YYYY-MM
   created_at: string;
 }
 

@@ -5,6 +5,28 @@
  * volledig meetelt.
  */
 
+const MAAND_NAMEN = [
+  "januari",
+  "februari",
+  "maart",
+  "april",
+  "mei",
+  "juni",
+  "juli",
+  "augustus",
+  "september",
+  "oktober",
+  "november",
+  "december",
+];
+
+/** "2026-09" → "September 2026" — voor weergave bovenaan het dashboard. */
+export function formatteerMaandNaam(maandSleutelWaarde: string): string {
+  const [jaarStr, maandStr] = maandSleutelWaarde.split("-");
+  const naam = MAAND_NAMEN[Number(maandStr) - 1] ?? maandSleutelWaarde;
+  return `${naam.charAt(0).toUpperCase()}${naam.slice(1)} ${jaarStr}`;
+}
+
 export function maandSleutel(datum: Date): string {
   const jaar = datum.getFullYear();
   const maand = String(datum.getMonth() + 1).padStart(2, "0");

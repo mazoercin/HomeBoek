@@ -8,20 +8,12 @@ import { Switch } from "@/components/ui/Switch";
 
 interface Props {
   overslaanbareUitgaven: ExtraUitgave[];
-  geskipteIds: string[];
   huidigWatOverblijft: number;
-  maand: string;
-  onToepassen: (ids: string[], maand: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  onToepassen: (ids: string[]) => Promise<{ gelukt: boolean; foutmelding?: string }>;
 }
 
 /** Rij 3 + 4: live "wat als?"-simulatie, puur client-side tot expliciet toegepast. */
-export function WatAlsKader({
-  overslaanbareUitgaven,
-  geskipteIds,
-  huidigWatOverblijft,
-  maand,
-  onToepassen,
-}: Props) {
+export function WatAlsKader({ overslaanbareUitgaven, huidigWatOverblijft, onToepassen }: Props) {
   const [aangevinkt, setAangevinkt] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const [fout, setFout] = useState<string | null>(null);
@@ -38,13 +30,13 @@ export function WatAlsKader({
   function toepassen() {
     setFout(null);
     startTransition(async () => {
-      const res = await onToepassen(aangevinkt, maand);
+      const res = await onToepassen(aangevinkt);
       if (res.gelukt) setAangevinkt([]);
       else setFout(res.foutmelding ?? "Kon niet opslaan.");
     });
   }
 
-  const beschikbaar = overslaanbareUitgaven.filter((u) => !geskipteIds.includes(u.id));
+  const beschikbaar = overslaanbareUitgaven.filter((u) => !u.geskipt);
 
   return (
     <div className="kaart">

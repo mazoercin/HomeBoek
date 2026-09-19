@@ -23,7 +23,7 @@ export async function zetFamilienaam(naam: string): Promise<{ gelukt: boolean; f
   const resultaat = await zetFamilienaamInData(naamGetrimd);
   if (resultaat.gelukt) {
     revalidatePath("/instellingen");
-    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/[maand]", "page");
   }
   return resultaat;
 }

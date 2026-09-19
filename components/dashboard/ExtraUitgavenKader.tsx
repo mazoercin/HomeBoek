@@ -11,18 +11,16 @@ import { ToonMeerKnop } from "@/components/ui/ToonMeerKnop";
 
 interface Props {
   items: ExtraUitgave[];
-  geskipteIds: string[];
-  maand: string;
   onToevoegen: (data: {
     label: string;
     bedrag: number;
     overslaanbaar: boolean;
   }) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onVerwijderen: (id: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
-  onZetGeskipt: (id: string, maand: string, geskipt: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  onZetGeskipt: (id: string, geskipt: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
 }
 
-export function ExtraUitgavenKader({ items, geskipteIds, maand, onToevoegen, onVerwijderen, onZetGeskipt }: Props) {
+export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGeskipt }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -65,7 +63,7 @@ export function ExtraUitgavenKader({ items, geskipteIds, maand, onToevoegen, onV
 
       <ul className="space-y-2 mb-2">
         {zichtbareItems.map((item) => {
-          const geskipt = geskipteIds.includes(item.id);
+          const geskipt = item.geskipt;
           return (
             <li
               key={item.id}
@@ -104,7 +102,7 @@ export function ExtraUitgavenKader({ items, geskipteIds, maand, onToevoegen, onV
                   disabled={isPending}
                   onWijzig={() =>
                     startTransition(async () => {
-                      await onZetGeskipt(item.id, maand, !geskipt);
+                      await onZetGeskipt(item.id, !geskipt);
                     })
                   }
                 />
