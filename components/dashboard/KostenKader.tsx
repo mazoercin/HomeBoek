@@ -8,6 +8,8 @@ import { CategorieIcon, categorieInfo } from "@/components/ui/CategorieIcon";
 import { Switch } from "@/components/ui/Switch";
 import { StapTip } from "@/components/ui/StapTip";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
+import { useUitklapbareLijst } from "@/components/ui/useUitklapbareLijst";
+import { ToonMeerKnop } from "@/components/ui/ToonMeerKnop";
 
 type Kost = VasteKost | Factuur;
 
@@ -47,6 +49,7 @@ export function KostenKader({
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { zichtbareItems, heeftMeer, uitgeklapt, wisselUitgeklapt, aantalVerborgen } = useUitklapbareLijst(items);
 
   function submit(formData: FormData) {
     setFout(null);
@@ -96,8 +99,8 @@ export function KostenKader({
         <StapTip stapNummer={stapTip.nummer} titel={stapTip.titel} uitleg={stapTip.uitleg} voorbeeld={stapTip.voorbeeld} />
       )}
 
-      <ul className="space-y-2 mb-4">
-        {items.map((item) => {
+      <ul className="space-y-2 mb-2">
+        {zichtbareItems.map((item) => {
           const info = categorieInfo(item.categorie);
           const betaald = betaaldMap[item.id] ?? false;
           return (
@@ -143,6 +146,10 @@ export function KostenKader({
           );
         })}
       </ul>
+
+      {heeftMeer && (
+        <ToonMeerKnop uitgeklapt={uitgeklapt} aantalVerborgen={aantalVerborgen} onKlik={wisselUitgeklapt} />
+      )}
 
       <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-4">

@@ -6,6 +6,8 @@ import type { Inkomen, InkomenBron, InkomenFrequentie } from "@/types/database";
 import { berekenMaandequivalent } from "@/lib/calculations/inkomen";
 import { StapTip } from "@/components/ui/StapTip";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
+import { useUitklapbareLijst } from "@/components/ui/useUitklapbareLijst";
+import { ToonMeerKnop } from "@/components/ui/ToonMeerKnop";
 
 interface Props {
   items: Inkomen[];
@@ -44,6 +46,7 @@ export function InkomenSectie({ items, onToevoegen, onVerwijderen }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { zichtbareItems, heeftMeer, uitgeklapt, wisselUitgeklapt, aantalVerborgen } = useUitklapbareLijst(items);
 
   function submit(formData: FormData) {
     setFout(null);
@@ -84,8 +87,8 @@ export function InkomenSectie({ items, onToevoegen, onVerwijderen }: Props) {
         />
       )}
 
-      <ul className="space-y-2 mb-4">
-        {items.map((item) => {
+      <ul className="space-y-2 mb-2">
+        {zichtbareItems.map((item) => {
           const maandequivalent = berekenMaandequivalent(item.bedrag, item.frequentie);
           return (
             <li
@@ -125,6 +128,10 @@ export function InkomenSectie({ items, onToevoegen, onVerwijderen }: Props) {
           );
         })}
       </ul>
+
+      {heeftMeer && (
+        <ToonMeerKnop uitgeklapt={uitgeklapt} aantalVerborgen={aantalVerborgen} onKlik={wisselUitgeklapt} />
+      )}
 
       <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-3">

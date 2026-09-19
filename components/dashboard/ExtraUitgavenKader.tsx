@@ -6,6 +6,8 @@ import type { ExtraUitgave } from "@/types/database";
 import { StapTip } from "@/components/ui/StapTip";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 import { Switch } from "@/components/ui/Switch";
+import { useUitklapbareLijst } from "@/components/ui/useUitklapbareLijst";
+import { ToonMeerKnop } from "@/components/ui/ToonMeerKnop";
 
 interface Props {
   items: ExtraUitgave[];
@@ -24,6 +26,7 @@ export function ExtraUitgavenKader({ items, geskipteIds, maand, onToevoegen, onV
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { zichtbareItems, heeftMeer, uitgeklapt, wisselUitgeklapt, aantalVerborgen } = useUitklapbareLijst(items);
 
   function submit(formData: FormData) {
     setFout(null);
@@ -60,8 +63,8 @@ export function ExtraUitgavenKader({ items, geskipteIds, maand, onToevoegen, onV
         />
       )}
 
-      <ul className="space-y-2 mb-4">
-        {items.map((item) => {
+      <ul className="space-y-2 mb-2">
+        {zichtbareItems.map((item) => {
           const geskipt = geskipteIds.includes(item.id);
           return (
             <li
@@ -125,6 +128,10 @@ export function ExtraUitgavenKader({ items, geskipteIds, maand, onToevoegen, onV
           );
         })}
       </ul>
+
+      {heeftMeer && (
+        <ToonMeerKnop uitgeklapt={uitgeklapt} aantalVerborgen={aantalVerborgen} onKlik={wisselUitgeklapt} />
+      )}
 
       <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-3">
