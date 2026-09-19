@@ -39,6 +39,9 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
   const [isPending, startTransition] = useTransition();
   const { zichtbareItems, heeftMeer, uitgeklapt, wisselUitgeklapt, aantalVerborgen } = useUitklapbareLijst(items);
 
+  const betaaldTotaal = items.filter((i) => i.betaald).reduce((s, i) => s + i.bedrag, 0);
+  const nogTeBetalenTotaal = items.filter((i) => !i.betaald).reduce((s, i) => s + i.bedrag, 0);
+
   function submit(formData: FormData) {
     setFout(null);
     const label = String(formData.get("label") ?? "").trim();
@@ -81,7 +84,19 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
 
   return (
     <div className="kaart" id={ankerId}>
-      <h2 className="text-lg font-bold tracking-tight mb-4">{titel}</h2>
+      <div className="flex items-start justify-between gap-2 mb-4 flex-wrap">
+        <h2 className="text-lg font-bold tracking-tight">{titel}</h2>
+        {items.length > 0 && (
+          <div className="flex items-center gap-2.5 text-[11px] font-semibold">
+            <span className="flex items-center gap-1 text-succes">
+              <span className="h-1.5 w-1.5 rounded-full bg-succes" /> Betaald €{betaaldTotaal.toFixed(2)}
+            </span>
+            <span className="flex items-center gap-1 text-tekst-secundair">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-300" /> Nog te betalen €{nogTeBetalenTotaal.toFixed(2)}
+            </span>
+          </div>
+        )}
+      </div>
 
       {items.length === 0 && !formOpen && (
         <StapTip stapNummer={stapTip.nummer} titel={stapTip.titel} uitleg={stapTip.uitleg} voorbeeld={stapTip.voorbeeld} />
