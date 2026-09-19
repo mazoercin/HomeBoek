@@ -1,11 +1,18 @@
 import Link from "next/link";
-import { PiggyBank } from "lucide-react";
+import { Home, PiggyBank } from "lucide-react";
 import { LoginForm } from "./LoginForm";
 
 export default function LoginPagina() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-primair-light via-white dark:via-kaart to-secundair-light">
       <div className="w-full max-w-sm animate-fade-in-up">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-tekst-secundair hover:text-tekst-primair mb-4"
+        >
+          <Home size={15} strokeWidth={2.25} /> Startpagina
+        </Link>
+
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-primair shadow-lg shadow-primair/25 mb-4">
             <PiggyBank size={30} color="#ffffff" strokeWidth={2} />
