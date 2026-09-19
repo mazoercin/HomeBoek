@@ -8,8 +8,6 @@ interface Props {
   betaaldHuidigeMaand: number;
   /** Van de vaste kosten + facturen van deze maand: hoeveel staat nog op "onbetaald". */
   nogTeBetalenHuidigeMaand: number;
-  /** Betaald + nog te betalen van deze maand samen — altijd "deze maand", ongeacht de gekozen periode. */
-  totaalOpenstaandHuidigeMaand: number;
 }
 
 /** Rij 1: de drie kernkaarten — inkomen, openstaand, en wat overblijft (groen/rood). */
@@ -19,7 +17,6 @@ export function SamenvattingKaarten({
   watOverblijft,
   betaaldHuidigeMaand,
   nogTeBetalenHuidigeMaand,
-  totaalOpenstaandHuidigeMaand,
 }: Props) {
   const positief = watOverblijft >= 0;
 
@@ -57,18 +54,13 @@ export function SamenvattingKaarten({
             Vul in bij Vaste kosten →
           </a>
         ) : (
-          <div className="mt-2 space-y-1.5">
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1 font-semibold text-succes">
-                <span className="h-1.5 w-1.5 rounded-full bg-succes" /> Betaald €{betaaldHuidigeMaand.toFixed(2)}
-              </span>
-              <span className="flex items-center gap-1 font-semibold text-tekst-secundair">
-                <span className="h-1.5 w-1.5 rounded-full bg-slate-300" /> Nog te betalen €{nogTeBetalenHuidigeMaand.toFixed(2)}
-              </span>
-            </div>
-            <p className="text-xs font-semibold text-tekst-primair">
-              Totaal openstaand deze maand: €{totaalOpenstaandHuidigeMaand.toFixed(2)}
-            </p>
+          <div className="flex items-center gap-3 mt-2 text-xs">
+            <span className="flex items-center gap-1 font-semibold text-succes">
+              <span className="h-1.5 w-1.5 rounded-full bg-succes" /> Betaald €{betaaldHuidigeMaand.toFixed(2)}
+            </span>
+            <span className="flex items-center gap-1 font-semibold text-tekst-secundair">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-300" /> Nog te betalen €{nogTeBetalenHuidigeMaand.toFixed(2)}
+            </span>
           </div>
         )}
       </div>

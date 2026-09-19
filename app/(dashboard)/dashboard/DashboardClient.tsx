@@ -123,9 +123,6 @@ export function DashboardClient({
     [data]
   );
   const betaaldHuidigeMaand = kostenMetBetaalStatus - nogTeBetalenHuidigeMaand;
-  // Vaste kosten + facturen van deze maand, ongeacht betaald-status en
-  // ongeacht de gekozen periode-tab — dit blijft altijd "deze maand".
-  const totaalOpenstaandHuidigeMaand = kostenMetBetaalStatus;
 
   const voorstellen = useMemo(() => {
     if (watOverblijftHuidigeMaand >= 0) return [];
@@ -160,7 +157,6 @@ export function DashboardClient({
           watOverblijft={watOverblijft}
           betaaldHuidigeMaand={betaaldHuidigeMaand}
           nogTeBetalenHuidigeMaand={nogTeBetalenHuidigeMaand}
-          totaalOpenstaandHuidigeMaand={totaalOpenstaandHuidigeMaand}
         />
       </ScrollReveal>
 
