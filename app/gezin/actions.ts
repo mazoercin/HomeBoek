@@ -178,7 +178,12 @@ export async function accepteerUitnodiging(
   await registreerPoging("accept", ipHash, sessie.gebruikerId, !error && !!data?.ok);
 
   if (error || !data) {
-    logger.error({
+    // Bewust afgewacht (i.p.v. het gebruikelijke fire-and-forget): dit
+    // logboekbericht is het enige spoor van de échte oorzaak, en stond
+    // vlak vóór een `return` — precies het patroon waarbij Vercel's
+    // serverless runtime een niet-afgewachte databaseschrijf kan killen
+    // vóór hij voltooit, zodat de fout onopgemerkt in het logboek ontbrak.
+    await logger.error({
       code: "DB_001",
       message: "Kon uitnodiging niet accepteren",
       context: { gebruikerId: sessie.gebruikerId, error: error?.message },

@@ -45,13 +45,23 @@ async function schrijfNaarDatabase(input: { code: string; message: string; conte
   }
 }
 
-function log(niveau: LogNiveau, input: { code: string; message: string; context?: Record<string, unknown> }): void {
+/**
+ * Geeft de databaseschrijf-promise terug i.p.v. hem weg te "voiden".
+ * Op Vercel's serverless runtime kan een niet-afgewachte promise
+ * gekilled worden zodra een Server Action/Route Handler zijn respons al
+ * teruggaf — vooral bij een logger.error() vlak vóór een `return`, het
+ * meest voorkomende patroon in deze codebase. Bestaande aanroepen die dit
+ * resultaat niet afwachten blijven werken (best-effort, zoals voorheen);
+ * kritieke plekken (bv. een foutpad in een Server Action dat je later wil
+ * kunnen naspeuren) kunnen er nu bewust wél op `await`en.
+ */
+function log(niveau: LogNiveau, input: { code: string; message: string; context?: Record<string, unknown> }): Promise<void> {
   // Altijd naar de console (Vercel vangt stdout/stderr op als Runtime Logs —
   // dat is op een serverless platform de enige plek waar je dit live ziet).
   // eslint-disable-next-line no-console
   console.log(`${KLEUR[niveau]}[${niveau}] ${input.code} — ${input.message}${RESET}`, input.context ?? "");
 
-  void schrijfNaarDatabase(input, niveau);
+  return schrijfNaarDatabase(input, niveau);
 }
 
 export const logger = {
