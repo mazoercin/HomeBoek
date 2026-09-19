@@ -114,15 +114,49 @@ export async function verwijderFactuur(id: string) {
 
 // ---------- Extra uitgaven CRUD ----------
 
+/**
+ * `id` is optioneel client-gegenereerd (zie de snel-toevoegen-FAB): geeft
+ * de gebruiker die zelf mee, dan is deze aanroep idempotent — een
+ * dubbele verzending (dubbelklik, trage verbinding + retry) met exact
+ * dezelfde id botst op de primary key en wordt hier stil als succes
+ * behandeld i.p.v. een tweede rij aan te maken.
+ */
 export async function voegExtraUitgaveToe(
-  data: { label: string; bedrag: number; overslaanbaar: boolean },
+  data: { id?: string; label: string; bedrag: number; overslaanbaar: boolean },
   maand: string
-) {
+): Promise<{ gelukt: boolean; foutmelding?: string }> {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon extra uitgave niet toevoegen", { data, maand }, () =>
-    supabase.from("extra_uitgaven").insert({ ...data, maand, household_id: context.householdId })
-  );
+
+  try {
+    const { error } = await supabase
+      .from("extra_uitgaven")
+      .insert({ ...data, maand, household_id: context.householdId });
+
+    if (error) {
+      if (error.code === "23505") {
+        // unique_violation op de id — deze extra kost staat al opgeslagen
+        // (dubbele verzending met dezelfde client-UUID), geen echte fout.
+        return { gelukt: true };
+      }
+      logger.error({
+        code: "DB_001",
+        message: "Kon extra uitgave niet toevoegen",
+        context: { data, maand, error: error.message },
+      });
+      return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
+    }
+
+    opnieuwValideren();
+    return { gelukt: true };
+  } catch (error) {
+    logger.error({
+      code: "DB_001",
+      message: "Kon extra uitgave niet toevoegen",
+      context: { data, maand, error: error instanceof Error ? error.message : String(error) },
+    });
+    return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
+  }
 }
 
 export async function verwijderExtraUitgave(id: string) {

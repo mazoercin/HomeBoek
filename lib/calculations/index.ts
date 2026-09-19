@@ -6,3 +6,4 @@ export * from "./saldo";
 export * from "./watAls";
 export * from "./doelen";
 export * from "./voorstellen";
+export * from "./geld";

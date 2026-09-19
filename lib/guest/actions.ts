@@ -89,15 +89,30 @@ export function maakGastActies(huidigeMaand: string, zetData: ZetData): Dashboar
     verwijderFactuur: (id) =>
       pas((data) => metMaand(data, huidigeMaand, (m) => ({ ...m, facturen: m.facturen.filter((f) => f.id !== id) }))),
 
+    // `invoer.id` is optioneel client-gegenereerd (snel-toevoegen-FAB) —
+    // staat er al een item met die id (dubbele verzending), dan is dit
+    // een stille no-op i.p.v. een tweede rij toe te voegen.
     voegExtraUitgaveToe: (invoer, maand) =>
       pas((data) =>
-        metMaand(data, maand, (m) => ({
-          ...m,
-          extraUitgaven: [
-            ...m.extraUitgaven,
-            { id: nieuwId(), ...invoer, maand, geskipt: false, created_at: nu(), updated_at: nu(), ...GAST_METADATA },
-          ],
-        }))
+        metMaand(data, maand, (m) =>
+          invoer.id && m.extraUitgaven.some((u) => u.id === invoer.id)
+            ? m
+            : {
+                ...m,
+                extraUitgaven: [
+                  ...m.extraUitgaven,
+                  {
+                    ...invoer,
+                    id: invoer.id ?? nieuwId(),
+                    maand,
+                    geskipt: false,
+                    created_at: nu(),
+                    updated_at: nu(),
+                    ...GAST_METADATA,
+                  },
+                ],
+              }
+        )
       ),
 
     verwijderExtraUitgave: (id) =>

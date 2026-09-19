@@ -50,10 +50,11 @@ export function isVoorOfGelijkAanMaand(sleutel: string, grens: string): boolean 
 
 /**
  * "Vandaag" als "YYYY-MM-DD", altijd in de Europe/Brussels-tijdzone —
- * ongeacht in welke tijdzone de server effectief draait (serverless
- * functies draaien vaak in UTC). `maandSleutel(new Date())` gebruikt de
- * lokale tijdzone van de omgeving, wat rond middernacht Belgische tijd
- * de verkeerde dag/maand kan teruggeven op een server in UTC.
+ * ongeacht in welke tijdzone de server of het toestel effectief draait
+ * (serverless functies draaien vaak in UTC). `maandSleutel(new Date())`
+ * gebruikt de lokale tijdzone van de omgeving, wat rond middernacht
+ * Belgische tijd de verkeerde dag/maand kan teruggeven op een server in
+ * UTC.
  */
 export function vandaagInBrusselAlsDatumString(nu: Date = new Date()): string {
   // en-CA formatteert consequent als YYYY-MM-DD.
