@@ -1,12 +1,4 @@
-import type {
-  VastInkomen,
-  FlexibelInkomen,
-  ExtraInkomen,
-  VasteKost,
-  Factuur,
-  ExtraUitgave,
-  Doel,
-} from "@/types/database";
+import type { Inkomen, ExtraInkomen, VasteKost, Factuur, ExtraUitgave, Doel } from "@/types/database";
 
 /** Status van een vaste kost/factuur voor één specifieke maand. */
 export interface BetaaldStatus {
@@ -16,8 +8,7 @@ export interface BetaaldStatus {
 }
 
 export interface InkomenInput {
-  vastInkomen: VastInkomen[];
-  flexibelInkomen: FlexibelInkomen[];
+  inkomen: Inkomen[];
   extraInkomen: ExtraInkomen[];
   /** De maand waarvoor berekend wordt, als "YYYY-MM". */
   maand: string;

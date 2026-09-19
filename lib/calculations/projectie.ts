@@ -2,14 +2,7 @@ import { logger } from "@/lib/logger";
 import { berekenTotaalInkomen } from "./inkomen";
 import { berekenOpenstaandBedrag } from "./uitgaven";
 import { voegMaandenToe } from "./maand";
-import type {
-  VastInkomen,
-  FlexibelInkomen,
-  ExtraInkomen,
-  VasteKost,
-  Factuur,
-  ExtraUitgave,
-} from "@/types/database";
+import type { Inkomen, ExtraInkomen, VasteKost, Factuur, ExtraUitgave } from "@/types/database";
 
 export interface MaandProjectie {
   maand: string; // YYYY-MM
@@ -19,8 +12,7 @@ export interface MaandProjectie {
 }
 
 export interface PeriodeProjectieInput {
-  vastInkomen: VastInkomen[];
-  flexibelInkomen: FlexibelInkomen[];
+  inkomen: Inkomen[];
   /** Enkel het extra inkomen van de huidige maand — telt bewust NIET automatisch door naar toekomstige maanden. */
   extraInkomenHuidigeMaand: ExtraInkomen[];
   vasteKosten: VasteKost[];
@@ -48,8 +40,7 @@ export function berekenPeriodeProjectie(input: PeriodeProjectieInput): MaandProj
 
     try {
       const inkomen = berekenTotaalInkomen({
-        vastInkomen: input.vastInkomen,
-        flexibelInkomen: input.flexibelInkomen,
+        inkomen: input.inkomen,
         // extra inkomen telt enkel mee in de maand waarvoor het bedoeld is
         extraInkomen: i === 0 ? input.extraInkomenHuidigeMaand : [],
         maand,

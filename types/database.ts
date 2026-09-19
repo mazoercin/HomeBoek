@@ -14,31 +14,21 @@ export interface Gebruiker {
   updated_at: string;
 }
 
-export type FlexibelInterval =
-  | "maandelijks"
-  | "2-maandelijks"
-  | "3-maandelijks"
-  | "halfjaarlijks"
-  | "jaarlijks";
+/**
+ * Hoe vaak een inkomenspost binnenkomt. Elke post draagt elke maand
+ * hetzelfde, gemiddelde maandbedrag bij (bedrag × frequentiefactor) —
+ * zie lib/calculations/inkomen.ts voor de exacte formule per waarde.
+ */
+export type InkomenFrequentie = "wekelijks" | "maandelijks" | "3-maandelijks" | "6-maandelijks" | "jaarlijks";
 
 export type InkomenBron = "zelf" | "partner" | "ander";
 
-export interface VastInkomen {
+export interface Inkomen {
   id: string;
   bron: InkomenBron;
   label: string;
   bedrag: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FlexibelInkomen {
-  id: string;
-  bron: InkomenBron;
-  label: string;
-  bedrag: number;
-  interval: FlexibelInterval;
-  volgende_datum: string; // YYYY-MM-DD
+  frequentie: InkomenFrequentie;
   created_at: string;
   updated_at: string;
 }

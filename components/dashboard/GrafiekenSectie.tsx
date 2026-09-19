@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { PieChart as PieChartIcon, Plus } from "lucide-react";
-import type { Categorie, InkomenBron, VastInkomen, VasteKost, ExtraUitgave } from "@/types/database";
+import type { Categorie, InkomenBron, Inkomen, VasteKost, ExtraUitgave } from "@/types/database";
 import { CATEGORIE_INFO } from "@/types/database";
+import { berekenMaandequivalent } from "@/lib/calculations/inkomen";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
 const KLEUREN = ["#6366F1", "#F59E0B", "#10B981", "#F43F5E", "#0EA5E9", "#8B5CF6", "#EC4899", "#64748B"];
@@ -163,10 +164,15 @@ function EenGrafiek({
 }
 
 interface Props {
-  vastInkomen: VastInkomen[];
+  inkomen: Inkomen[];
   vasteKosten: VasteKost[];
   extraUitgaven: ExtraUitgave[];
-  onVastInkomenToevoegen: (data: { bron: InkomenBron; label: string; bedrag: number }) => ActieResultaat;
+  onInkomenToevoegen: (data: {
+    bron: InkomenBron;
+    label: string;
+    bedrag: number;
+    frequentie: "maandelijks";
+  }) => ActieResultaat;
   onVasteKostToevoegen: (data: {
     label: string;
     bedrag: number;
@@ -186,14 +192,17 @@ interface Props {
  * omgekeerd), via dezelfde server-acties.
  */
 export function GrafiekenSectie({
-  vastInkomen,
+  inkomen,
   vasteKosten,
   extraUitgaven,
-  onVastInkomenToevoegen,
+  onInkomenToevoegen,
   onVasteKostToevoegen,
   onExtraUitgaveToevoegen,
 }: Props) {
-  const inkomenData: Segment[] = vastInkomen.map((i) => ({ naam: i.label, waarde: i.bedrag }));
+  const inkomenData: Segment[] = inkomen.map((i) => ({
+    naam: i.label,
+    waarde: berekenMaandequivalent(i.bedrag, i.frequentie),
+  }));
 
   const kostenPerCategorie = new Map<string, number>();
   for (const kost of vasteKosten) {
@@ -218,10 +227,11 @@ export function GrafiekenSectie({
             <SnelToevoegen
               soort="inkomen"
               onToevoegen={(fd) =>
-                onVastInkomenToevoegen({
+                onInkomenToevoegen({
                   bron: "zelf",
                   label: String(fd.get("label")),
                   bedrag: Number(fd.get("bedrag")),
+                  frequentie: "maandelijks",
                 })
               }
             />

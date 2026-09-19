@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { maakServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import { requireSessie, requireRole } from "@/lib/auth/require-role";
-import type { Categorie, InkomenBron } from "@/types/database";
+import type { Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
 
 function opnieuwValideren() {
   revalidatePath("/dashboard");
@@ -220,17 +220,22 @@ export async function voegDoelBijdrageToe(data: {
 
 // ---------- Inkomen ----------
 
-export async function voegVastInkomenToe(data: { bron: InkomenBron; label: string; bedrag: number }) {
+export async function voegInkomenToe(data: {
+  bron: InkomenBron;
+  label: string;
+  bedrag: number;
+  frequentie: InkomenFrequentie;
+}) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon vast inkomen niet toevoegen", { data }, () =>
-    supabase.from("vast_inkomen").insert(data)
+  return veiligUitvoeren("DB_001", "Kon inkomen niet toevoegen", { data }, () =>
+    supabase.from("inkomen").insert(data)
   );
 }
 
-export async function verwijderVastInkomen(id: string) {
+export async function verwijderInkomen(id: string) {
   const supabase = maakServiceClient();
-  return veiligUitvoeren("DB_001", "Kon vast inkomen niet verwijderen", { id }, () =>
-    supabase.from("vast_inkomen").delete().eq("id", id)
+  return veiligUitvoeren("DB_001", "Kon inkomen niet verwijderen", { id }, () =>
+    supabase.from("inkomen").delete().eq("id", id)
   );
 }
 

@@ -40,8 +40,8 @@ import {
   voegDoelBijdrageToe,
   voegInvesteringToe,
   voegInvesteringTransactieToe,
-  voegVastInkomenToe,
-  verwijderVastInkomen,
+  voegInkomenToe,
+  verwijderInkomen,
   wisAlleData,
 } from "./actions";
 
@@ -61,8 +61,7 @@ export function DashboardClient({
   const projectie = useMemo(
     () =>
       berekenPeriodeProjectie({
-        vastInkomen: data.vastInkomen,
-        flexibelInkomen: data.flexibelInkomen,
+        inkomen: data.inkomen,
         extraInkomenHuidigeMaand: data.extraInkomen,
         vasteKosten: data.vasteKosten,
         facturen: data.facturen,
@@ -83,8 +82,7 @@ export function DashboardClient({
   const inkomenHuidigeMaand = useMemo(
     () =>
       berekenTotaalInkomen({
-        vastInkomen: data.vastInkomen,
-        flexibelInkomen: data.flexibelInkomen,
+        inkomen: data.inkomen,
         extraInkomen: data.extraInkomen,
         maand: huidigeMaand,
       }),
@@ -212,17 +210,17 @@ export function DashboardClient({
 
       <ScrollReveal>
         <GrafiekenSectie
-          vastInkomen={data.vastInkomen}
+          inkomen={data.inkomen}
           vasteKosten={data.vasteKosten}
           extraUitgaven={data.extraUitgaven}
-          onVastInkomenToevoegen={voegVastInkomenToe}
+          onInkomenToevoegen={voegInkomenToe}
           onVasteKostToevoegen={voegVasteKostToe}
           onExtraUitgaveToevoegen={voegExtraUitgaveToe}
         />
       </ScrollReveal>
 
       <ScrollReveal>
-        <InkomenSectie items={data.vastInkomen} onToevoegen={voegVastInkomenToe} onVerwijderen={verwijderVastInkomen} />
+        <InkomenSectie items={data.inkomen} onToevoegen={voegInkomenToe} onVerwijderen={verwijderInkomen} />
       </ScrollReveal>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">

@@ -1,8 +1,7 @@
 import { maakServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import type {
-  VastInkomen,
-  FlexibelInkomen,
+  Inkomen,
   ExtraInkomen,
   VasteKost,
   VasteKostBetaald,
@@ -17,8 +16,7 @@ import type {
 } from "@/types/database";
 
 export interface DashboardData {
-  vastInkomen: VastInkomen[];
-  flexibelInkomen: FlexibelInkomen[];
+  inkomen: Inkomen[];
   extraInkomen: ExtraInkomen[];
   vasteKosten: VasteKost[];
   vasteKostenBetaald: VasteKostBetaald[];
@@ -34,8 +32,7 @@ export interface DashboardData {
 }
 
 const LEEG: DashboardData = {
-  vastInkomen: [],
-  flexibelInkomen: [],
+  inkomen: [],
   extraInkomen: [],
   vasteKosten: [],
   vasteKostenBetaald: [],
@@ -61,8 +58,7 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
 
   try {
     const [
-      vastInkomen,
-      flexibelInkomen,
+      inkomen,
       extraInkomen,
       vasteKosten,
       vasteKostenBetaald,
@@ -75,8 +71,7 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
       investeringen,
       investeringTransacties,
     ] = await Promise.all([
-      supabase.from("vast_inkomen").select("*").order("created_at"),
-      supabase.from("flexibel_inkomen").select("*").order("created_at"),
+      supabase.from("inkomen").select("*").order("created_at"),
       supabase.from("extra_inkomen").select("*").eq("maand", maand),
       supabase.from("vaste_kosten").select("*").order("created_at"),
       supabase.from("vaste_kosten_betaald").select("*").eq("maand", maand),
@@ -91,8 +86,7 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
     ]);
 
     const alleResultaten = [
-      vastInkomen,
-      flexibelInkomen,
+      inkomen,
       extraInkomen,
       vasteKosten,
       vasteKostenBetaald,
@@ -117,8 +111,7 @@ export async function haalDashboardData(maand: string): Promise<DashboardData> {
     }
 
     return {
-      vastInkomen: vastInkomen.data ?? [],
-      flexibelInkomen: flexibelInkomen.data ?? [],
+      inkomen: inkomen.data ?? [],
       extraInkomen: extraInkomen.data ?? [],
       vasteKosten: vasteKosten.data ?? [],
       vasteKostenBetaald: vasteKostenBetaald.data ?? [],
