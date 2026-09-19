@@ -2,6 +2,23 @@ import { maakServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import type { Gebruiker } from "@/types/database";
 
+/** Haalt alle gebruikersprofielen op, nieuwste eerst — voor het admin-gebruikersoverzicht. */
+export async function lijstGebruikers(): Promise<Gebruiker[]> {
+  const supabase = maakServiceClient();
+  const { data, error } = await supabase.from("gebruikers").select("*").order("created_at", { ascending: false });
+
+  if (error) {
+    logger.error({
+      code: "DB_001",
+      message: "Kon gebruikerslijst niet ophalen",
+      context: { error: error.message },
+    });
+    return [];
+  }
+
+  return (data ?? []) as Gebruiker[];
+}
+
 /** Haalt het gebruikersprofiel op bij een Supabase Auth-gebruikers-id. */
 export async function haalGebruikersProfiel(id: string): Promise<Gebruiker | null> {
   const supabase = maakServiceClient();

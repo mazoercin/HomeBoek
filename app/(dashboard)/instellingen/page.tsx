@@ -1,14 +1,26 @@
 import { requireRole } from "@/lib/auth/require-role";
 import { leesLogRegels } from "@/lib/logger.server";
 import { haalFamilienaam } from "@/lib/data/instellingen";
+import { lijstGebruikers } from "@/lib/auth/gebruiker";
 import { LogViewer } from "@/components/instellingen/LogViewer";
 import { FamilienaamKaart } from "@/components/instellingen/FamilienaamKaart";
-import { wisLogboek, zetFamilienaam } from "./actions";
+import { GebruikersBeheer } from "@/components/instellingen/GebruikersBeheer";
+import {
+  wisLogboek,
+  zetFamilienaam,
+  verwijderGebruiker,
+  stuurWachtwoordResetLink,
+  veranderWachtwoordVoorGebruiker,
+} from "./actions";
 import { uitloggen } from "../logout-action";
 
 export default async function InstellingenPagina() {
-  requireRole("admin");
-  const [regels, familienaam] = await Promise.all([leesLogRegels(200), haalFamilienaam()]);
+  const sessie = requireRole("admin");
+  const [regels, familienaam, gebruikers] = await Promise.all([
+    leesLogRegels(200),
+    haalFamilienaam(),
+    lijstGebruikers(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -22,6 +34,14 @@ export default async function InstellingenPagina() {
       </div>
 
       <FamilienaamKaart huidigeNaam={familienaam} onOpslaan={zetFamilienaam} />
+
+      <GebruikersBeheer
+        gebruikers={gebruikers}
+        huidigeGebruikerId={sessie.gebruikerId}
+        onVerwijderen={verwijderGebruiker}
+        onResetLinkSturen={stuurWachtwoordResetLink}
+        onWachtwoordWijzigen={veranderWachtwoordVoorGebruiker}
+      />
 
       <LogViewer regels={regels} onWissen={wisLogboek} />
     </div>
