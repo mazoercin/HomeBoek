@@ -94,24 +94,30 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
           </a>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {vandaag && vandaag !== huidigeMaand && (
-            <a href={`/dashboard/${vandaag}`} className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
-              <RotateCcw size={16} strokeWidth={2.25} /> Naar huidige maand
+            <a
+              href={`/dashboard/${vandaag}`}
+              className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5 whitespace-nowrap flex-1 sm:flex-none justify-center"
+            >
+              <RotateCcw size={16} strokeWidth={2.25} className="shrink-0" /> Naar huidige maand
             </a>
           )}
-          <a href="/overzicht" className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
-            <CalendarDays size={16} strokeWidth={2.25} /> Overzicht
+          <a
+            href="/overzicht"
+            className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5 whitespace-nowrap flex-1 sm:flex-none justify-center"
+          >
+            <CalendarDays size={16} strokeWidth={2.25} className="shrink-0" /> Overzicht
           </a>
           <button
             type="button"
-            className="knop-primair !min-h-[38px] !px-4 !text-sm gap-1.5"
+            className="knop-primair !min-h-[38px] !px-4 !text-sm gap-1.5 whitespace-nowrap flex-1 sm:flex-none justify-center basis-full sm:basis-auto"
             onClick={() => {
               setNieuweMaand(huidigeMaand);
               setOpen((v) => !v);
             }}
           >
-            <CalendarPlus size={16} strokeWidth={2.25} /> Nieuwe maand registreren
+            <CalendarPlus size={16} strokeWidth={2.25} className="shrink-0" /> Nieuwe maand registreren
           </button>
         </div>
       </div>
