@@ -10,8 +10,6 @@ import type { HouseholdRol } from "@/types/database";
 export interface ExtraKostToevoegResultaat {
   gelukt: boolean;
   foutmelding?: string;
-  /** True als de gekozen datum in een andere maand valt dan de bekeken maand. */
-  andereMaand?: boolean;
 }
 
 interface Props {
@@ -58,7 +56,7 @@ export function ExtraKostWidget({ rol, onVoegToe, onMaakOngedaan }: Props) {
     }
 
     setToast({
-      bericht: `${formatteerEuro(invoer.bedrag)} toegevoegd${resultaat.andereMaand ? ` aan ${invoer.maand}` : ""}`,
+      bericht: `${formatteerEuro(invoer.bedrag)} toegevoegd`,
       ongedaanMakenId: id,
     });
     return { gelukt: true };

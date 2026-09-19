@@ -3,16 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { parseBedragNaarCents, centsNaarEuro } from "@/lib/calculations/geld";
-import { vandaagInBrusselAlsDatumString, maandVanDatumString } from "@/lib/calculations/maand";
-import { leesRecenteOmschrijvingen, voegRecenteOmschrijvingToe } from "@/lib/extra-kost/recente-omschrijvingen";
-
-const VASTE_CHIPS = ["Kaars", "Tanken", "Drank", "Boodschappen", "Cadeau", "Andere"];
 
 export interface ExtraKostInvoer {
   bedrag: number;
   label: string;
-  datum: string; // YYYY-MM-DD
-  maand: string; // YYYY-MM, afgeleid van datum
 }
 
 interface Props {
@@ -24,26 +18,27 @@ interface Props {
 const FOCUSBARE_ELEMENTEN = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
- * Snel-invoerscherm voor een extra kost: bottom sheet op mobiel
- * (`max-sm:`), kleine gecentreerde modal op desktop (`sm:`) — zelfde
- * component, enkel responsive klassen. Focus trap + Escape + klik
- * naast het scherm sluiten, autofocus op het bedrag.
+ * Snel-invoerscherm voor een extra kost — bewust minimaal: enkel bedrag
+ * en omschrijving, meteen toevoegen aan de maand die je nu bekijkt. Geen
+ * categorie/datum/chips/"nog één" — dat maakte het te ingewikkeld voor
+ * wat dit moet zijn: één tik, bedrag intikken, klaar.
+ *
+ * Bottom sheet op mobiel (`max-sm:`), kleine gecentreerde modal op
+ * desktop (`sm:`) — zelfde component, enkel responsive klassen. Focus
+ * trap + Escape + klik naast het scherm sluiten, autofocus op het
+ * bedrag.
  */
 export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
   const [bedragTekst, setBedragTekst] = useState("");
   const [omschrijving, setOmschrijving] = useState("");
-  const [categorie, setCategorie] = useState("");
-  const [datum, setDatum] = useState(() => vandaagInBrusselAlsDatumString());
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
-  const [recenteOmschrijvingen, setRecenteOmschrijvingen] = useState<string[]>([]);
 
   const paneelRef = useRef<HTMLDivElement>(null);
   const bedragRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    setRecenteOmschrijvingen(leesRecenteOmschrijvingen());
     // Volgende tick, zodat het element al gemonteerd/zichtbaar is.
     const id = requestAnimationFrame(() => bedragRef.current?.focus());
     return () => cancelAnimationFrame(id);
@@ -83,15 +78,7 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
 
   if (!open) return null;
 
-  function reset() {
-    setBedragTekst("");
-    setOmschrijving("");
-    setCategorie("");
-    setDatum(vandaagInBrusselAlsDatumString());
-    setFout(null);
-  }
-
-  async function verzend(blijfOpen: boolean) {
+  async function verzend() {
     setFout(null);
 
     const cents = parseBedragNaarCents(bedragTekst);
@@ -104,21 +91,9 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
       setFout("Vul een omschrijving in.");
       return;
     }
-    if (!datum) {
-      setFout("Kies een geldige datum.");
-      return;
-    }
-
-    const schoneCategorie = categorie.trim();
-    const label = schoneCategorie ? `${schoneOmschrijving} (${schoneCategorie})` : schoneOmschrijving;
 
     setIsPending(true);
-    const resultaat = await onVoegToe({
-      bedrag: centsNaarEuro(cents),
-      label,
-      datum,
-      maand: maandVanDatumString(datum),
-    });
+    const resultaat = await onVoegToe({ bedrag: centsNaarEuro(cents), label: schoneOmschrijving });
     setIsPending(false);
 
     if (!resultaat.gelukt) {
@@ -126,18 +101,10 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
       return;
     }
 
-    voegRecenteOmschrijvingToe(schoneOmschrijving);
-
-    if (blijfOpen) {
-      reset();
-      requestAnimationFrame(() => bedragRef.current?.focus());
-    } else {
-      onSluiten();
-      reset();
-    }
+    setBedragTekst("");
+    setOmschrijving("");
+    onSluiten();
   }
-
-  const chipOpties = [...VASTE_CHIPS, ...recenteOmschrijvingen.filter((r) => !VASTE_CHIPS.includes(r))];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -164,7 +131,7 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
             type="button"
             onClick={onSluiten}
             aria-label="Sluiten"
-            className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-tekst-primair hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-tekst-primair hover:bg-slate-100 transition"
           >
             <X size={18} strokeWidth={2.25} />
           </button>
@@ -174,7 +141,7 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
           className="px-5 pb-5 pt-3 space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            void verzend(false);
+            void verzend();
           }}
         >
           <div>
@@ -206,50 +173,6 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
               value={omschrijving}
               onChange={(e) => setOmschrijving(e.target.value)}
             />
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {chipOpties.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => setOmschrijving(chip)}
-                  className={`text-xs font-semibold rounded-full px-3 py-1.5 min-h-[32px] transition ${
-                    omschrijving === chip
-                      ? "bg-primair text-white"
-                      : "bg-primair-light text-primair-dark hover:brightness-95"
-                  }`}
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="veld-label" htmlFor="extra-kost-categorie">
-              Categorie (optioneel)
-            </label>
-            <input
-              id="extra-kost-categorie"
-              name="categorie"
-              autoComplete="off"
-              className="veld-input"
-              value={categorie}
-              onChange={(e) => setCategorie(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="veld-label" htmlFor="extra-kost-datum">
-              Datum
-            </label>
-            <input
-              id="extra-kost-datum"
-              name="datum"
-              type="date"
-              className="veld-input"
-              value={datum}
-              onChange={(e) => setDatum(e.target.value)}
-            />
           </div>
 
           {fout && (
@@ -258,19 +181,9 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
             </p>
           )}
 
-          <div className="flex gap-2 pt-1">
-            <button type="submit" className="knop-primair flex-1" disabled={isPending}>
-              {isPending ? "Bezig…" : fout ? "Opnieuw proberen" : "Toevoegen"}
-            </button>
-            <button
-              type="button"
-              className="knop-secundair"
-              disabled={isPending}
-              onClick={() => void verzend(true)}
-            >
-              + nog één
-            </button>
-          </div>
+          <button type="submit" className="knop-primair w-full" disabled={isPending}>
+            {isPending ? "Bezig…" : fout ? "Opnieuw proberen" : "Toevoegen"}
+          </button>
         </form>
       </div>
     </div>

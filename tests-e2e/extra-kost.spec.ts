@@ -13,7 +13,7 @@ function euroTekstNaarGetal(tekst: string): number {
 }
 
 test.describe("Extra kost — snel toevoegen via de floating knop", () => {
-  test("openen, chip kiezen, toevoegen: verschijnt direct in de lijst en saldo is meteen bijgewerkt, blijft staan na herlaad", async ({
+  test("openen, invullen, toevoegen: verschijnt direct in de lijst en saldo is meteen bijgewerkt, blijft staan na herlaad", async ({
     page,
   }) => {
     await gaNaarGastDashboard(page);
@@ -27,10 +27,8 @@ test.describe("Extra kost — snel toevoegen via de floating knop", () => {
     await expect(page.getByLabel("Bedrag (€)")).toBeFocused();
 
     await page.getByLabel("Bedrag (€)").fill("8,50");
-    await dialoog.getByRole("button", { name: "Boodschappen" }).click();
-    await expect(page.getByLabel("Omschrijving")).toHaveValue("Boodschappen");
-
-    await dialoog.getByRole("button", { name: "Toevoegen", exact: true }).click();
+    await page.getByLabel("Omschrijving").fill("Boodschappen");
+    await dialoog.getByRole("button", { name: "Toevoegen" }).click();
 
     await expect(page.getByTestId("extra-kost-toast")).toBeVisible();
     await expect(page.getByTestId("extra-kost-toast")).toContainText("€ 8,50 toegevoegd");
@@ -60,7 +58,7 @@ test.describe("Extra kost — snel toevoegen via de floating knop", () => {
     const dialoog = page.getByRole("dialog", { name: "Extra kost toevoegen" });
     await page.getByLabel("Bedrag (€)").fill("15");
     await page.getByLabel("Omschrijving").fill("Tijdelijk item");
-    await dialoog.getByRole("button", { name: "Toevoegen", exact: true }).click();
+    await dialoog.getByRole("button", { name: "Toevoegen" }).click();
 
     await expect(page.getByTestId("extra-uitgaven-lijst")).toContainText("Tijdelijk item");
     const openstaandNaToevoegen = euroTekstNaarGetal(await page.getByTestId("samenvatting-openstaand").innerText());
@@ -82,28 +80,12 @@ test.describe("Extra kost — snel toevoegen via de floating knop", () => {
 
     await page.getByLabel("Bedrag (€)").fill("-5");
     await page.getByLabel("Omschrijving").fill("Ongeldig");
-    await dialoog.getByRole("button", { name: "Toevoegen", exact: true }).click();
+    await dialoog.getByRole("button", { name: "Toevoegen" }).click();
 
     await expect(dialoog.getByRole("alert")).toContainText("geldig bedrag");
     expect(await page.getByTestId("extra-uitgaven-lijst").locator("li").count()).toBe(aantalItemsVoor);
     // Het ingevoerde bedrag blijft staan zodat je het meteen kan corrigeren.
     await expect(page.getByLabel("Bedrag (€)")).toHaveValue("-5");
-  });
-
-  test("Toevoegen + nog één laat het scherm open en leegt het formulier", async ({ page }) => {
-    await gaNaarGastDashboard(page);
-
-    await page.getByRole("button", { name: "Extra kost toevoegen" }).click();
-    const dialoog = page.getByRole("dialog", { name: "Extra kost toevoegen" });
-    await page.getByLabel("Bedrag (€)").fill("3");
-    await page.getByLabel("Omschrijving").fill("Eerste");
-    await dialoog.getByRole("button", { name: "+ nog één" }).click();
-
-    await expect(dialoog).toBeVisible();
-    await expect(page.getByLabel("Bedrag (€)")).toHaveValue("");
-    await expect(page.getByLabel("Omschrijving")).toHaveValue("");
-    await expect(page.getByLabel("Bedrag (€)")).toBeFocused();
-    await expect(page.getByTestId("extra-uitgaven-lijst")).toContainText("Eerste");
   });
 
   test("toetsenbordbediening: sneltoets N opent het scherm, Escape sluit het, Tab blijft binnen de dialoog", async ({
