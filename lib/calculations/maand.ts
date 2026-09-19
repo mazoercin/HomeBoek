@@ -47,3 +47,25 @@ export function isNaMaand(sleutel: string, grens: string): boolean {
 export function isVoorOfGelijkAanMaand(sleutel: string, grens: string): boolean {
   return sleutel <= grens;
 }
+
+/**
+ * "Vandaag" als "YYYY-MM-DD", altijd in de Europe/Brussels-tijdzone —
+ * ongeacht in welke tijdzone de server effectief draait (serverless
+ * functies draaien vaak in UTC). `maandSleutel(new Date())` gebruikt de
+ * lokale tijdzone van de omgeving, wat rond middernacht Belgische tijd
+ * de verkeerde dag/maand kan teruggeven op een server in UTC.
+ */
+export function vandaagInBrusselAlsDatumString(nu: Date = new Date()): string {
+  // en-CA formatteert consequent als YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(nu);
+}
+
+/** "YYYY-MM-DD" → "YYYY-MM". */
+export function maandVanDatumString(datumString: string): string {
+  return datumString.slice(0, 7);
+}
+
+/** De echte huidige kalendermaand, Europe/Brussels-bewust. */
+export function huidigeMaandInBrussel(nu: Date = new Date()): string {
+  return maandVanDatumString(vandaagInBrusselAlsDatumString(nu));
+}

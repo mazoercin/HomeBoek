@@ -4,9 +4,9 @@ import { vereisHousehold } from "@/lib/auth/household";
 
 export const dynamic = "force-dynamic";
 
-/** /dashboard zonder maand → stuur door naar de meest recente geregistreerde maand. */
+/** /dashboard zonder maand → stuur altijd door naar de échte huidige kalendermaand. */
 export default async function DashboardRedirectPagina() {
-  const context = await vereisHousehold();
-  const maand = await haalStandaardMaand(context.householdId);
+  await vereisHousehold();
+  const maand = haalStandaardMaand();
   redirect(`/dashboard/${maand}`);
 }
