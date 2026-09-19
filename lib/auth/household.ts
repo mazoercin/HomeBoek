@@ -23,7 +23,11 @@ export interface HouseholdContext {
  *
  * v1 toont in de UI precies één huishouden per gebruiker (het schema
  * ondersteunt er meerdere, maar er is nog geen wisselaar) — we nemen
- * dus gewoon het eerst-gevonden lidmaatschap.
+ * het LAATST-toegetreden lidmaatschap, niet het eerste. Zo kom je na
+ * het accepteren van een uitnodiging altijd meteen op dat gedeelde
+ * dashboard terecht, ook als je zelf al eerder (bv. automatisch bij
+ * registratie) je eigen huishouden had — anders bleef je onzichtbaar
+ * in dat oude, eigen huishouden hangen ondanks een geslaagde toetreding.
  *
  * Heeft de gebruiker nog geen enkel huishouden (net geregistreerd
  * zonder uitnodiging), dan sturen we door naar de onboardingpagina.
@@ -36,7 +40,7 @@ export async function vereisHousehold(): Promise<HouseholdContext> {
     .from("household_members")
     .select("household_id, role, households(name, currency)")
     .eq("user_id", sessie.gebruikerId)
-    .order("joined_at")
+    .order("joined_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 

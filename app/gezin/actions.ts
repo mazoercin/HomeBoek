@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { maakServerClient } from "@/lib/supabase/server";
 import { requireSessie } from "@/lib/auth/require-role";
+import { haalSessie } from "@/lib/auth/session";
 import { vereisHousehold, vereisHouseholdRol } from "@/lib/auth/household";
 import { genereerUitnodigingsToken, hashUitnodigingsToken } from "@/lib/auth/uitnodiging";
 import { haalIpHash, magDoor, registreerPoging } from "@/lib/auth/rate-limit";
@@ -97,10 +98,25 @@ interface UitnodigingLookup {
   reden: string | null;
 }
 
-/** Enkel voor een publieke, veilige weergave (naam huishouden, uitnodiger, rol) — nooit budgetdata. */
+/**
+ * Enkel voor een publieke, veilige weergave (naam huishouden, uitnodiger, rol) — nooit budgetdata.
+ *
+ * Is de bezoeker al ingelogd én al lid van een ánder huishouden (bv. het
+ * eigen huishouden dat automatisch werd aangemaakt bij registratie), dan
+ * geven we ook diens huidige huishoudnaam mee — zodat het uitnodigings-
+ * scherm expliciet kan waarschuwen dat toetreden hun huidige dashboard
+ * vervangt, in plaats van dat dat stilzwijgend gebeurt.
+ */
 export async function bekijkUitnodiging(
   token: string
-): Promise<{ geldig: boolean; householdNaam?: string; uitgenodigdDoor?: string; rol?: string; foutmelding?: string }> {
+): Promise<{
+  geldig: boolean;
+  householdNaam?: string;
+  uitgenodigdDoor?: string;
+  rol?: string;
+  foutmelding?: string;
+  huidigHouseholdNaam?: string;
+}> {
   const tokenHash = hashUitnodigingsToken(token);
   const supabase = maakServerClient();
   const { data, error } = await supabase
@@ -113,11 +129,33 @@ export async function bekijkUitnodiging(
   if (!data.geldig) {
     return { geldig: false, foutmelding: FOUT_TEKSTEN[data.reden ?? ""] ?? "Deze link is niet meer geldig." };
   }
+
+  let huidigHouseholdNaam: string | undefined;
+  const sessie = haalSessie();
+  if (sessie) {
+    const { data: eigenLid } = await supabase
+      .from("household_members")
+      .select("households(name)")
+      .eq("user_id", sessie.gebruikerId)
+      .order("joined_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const eigenHousehold = eigenLid
+      ? Array.isArray(eigenLid.households)
+        ? eigenLid.households[0]
+        : eigenLid.households
+      : null;
+    if (eigenHousehold?.name && eigenHousehold.name !== data.household_naam) {
+      huidigHouseholdNaam = eigenHousehold.name;
+    }
+  }
+
   return {
     geldig: true,
     householdNaam: data.household_naam ?? undefined,
     uitgenodigdDoor: data.uitgenodigd_door ?? undefined,
     rol: data.rol ?? undefined,
+    huidigHouseholdNaam,
   };
 }
 

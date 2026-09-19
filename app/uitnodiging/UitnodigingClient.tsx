@@ -24,7 +24,12 @@ interface Props {
 export function UitnodigingClient({ ingelogd, gebruikersnaam, serverToken }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("laden");
-  const [info, setInfo] = useState<{ householdNaam?: string; uitgenodigdDoor?: string; rol?: string }>({});
+  const [info, setInfo] = useState<{
+    householdNaam?: string;
+    uitgenodigdDoor?: string;
+    rol?: string;
+    huidigHouseholdNaam?: string;
+  }>({});
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -41,7 +46,12 @@ export function UitnodigingClient({ ingelogd, gebruikersnaam, serverToken }: Pro
 
     bekijkUitnodiging(gevonden).then((res) => {
       if (res.geldig) {
-        setInfo({ householdNaam: res.householdNaam, uitgenodigdDoor: res.uitgenodigdDoor, rol: res.rol });
+        setInfo({
+          householdNaam: res.householdNaam,
+          uitgenodigdDoor: res.uitgenodigdDoor,
+          rol: res.rol,
+          huidigHouseholdNaam: res.huidigHouseholdNaam,
+        });
         setStatus("geldig");
       } else {
         setStatus("ongeldig");
@@ -102,6 +112,20 @@ export function UitnodigingClient({ ingelogd, gebruikersnaam, serverToken }: Pro
             </p>
             <p className="text-xl font-extrabold text-tekst-primair mt-0.5">{info.householdNaam}</p>
             <p className="text-xs text-tekst-secundair mt-1">Jij {rolLabel}.</p>
+
+            {info.huidigHouseholdNaam && (
+              <div className="mt-4 rounded-xl bg-goud-bg border border-goud/25 p-3 text-left">
+                <p className="text-xs font-semibold text-tekst-primair">
+                  Let op: je hebt momenteel al een eigen dashboard bij{" "}
+                  <span className="font-bold">{info.huidigHouseholdNaam}</span>.
+                </p>
+                <p className="text-xs text-tekst-secundair mt-1">
+                  Zodra je hier toetreedt, zie je voortaan{" "}
+                  <span className="font-semibold text-tekst-primair">{info.householdNaam}</span> in plaats daarvan.
+                  Je oude dashboard blijft bestaan, maar is dan niet meer zichtbaar in de app.
+                </p>
+              </div>
+            )}
 
             {fout && <p className="veld-fout mt-3">{fout}</p>}
 
