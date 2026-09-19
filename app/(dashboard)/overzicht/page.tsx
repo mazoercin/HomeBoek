@@ -1,16 +1,24 @@
+import Link from "next/link";
+import { RotateCcw } from "lucide-react";
 import { requireSessie } from "@/lib/auth/require-role";
 import { haalMaandOverzicht } from "@/lib/data/overzicht";
+import { maandSleutel } from "@/lib/calculations/maand";
 import { OverzichtClient } from "@/components/overzicht/OverzichtClient";
 
 export default async function OverzichtPagina() {
   requireSessie();
-  const { maanden, fout } = await haalMaandOverzicht();
+  const [{ maanden, fout }, vandaag] = [await haalMaandOverzicht(), maandSleutel(new Date())];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">Overzicht</h1>
-        <p className="text-sm text-tekst-secundair mt-0.5">Al je maanden in één oogopslag.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">Overzicht</h1>
+          <p className="text-sm text-tekst-secundair mt-0.5">Al je maanden in één oogopslag.</p>
+        </div>
+        <Link href={`/dashboard/${vandaag}`} className="knop-secundair gap-1.5">
+          <RotateCcw size={16} strokeWidth={2.25} /> Naar huidige maand
+        </Link>
       </div>
 
       {fout ? (

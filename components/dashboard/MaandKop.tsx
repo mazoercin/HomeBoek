@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, CalendarPlus, CalendarDays } from "lucide-react";
-import { formatteerMaandNaam } from "@/lib/calculations/maand";
+import { ChevronLeft, ChevronRight, CalendarPlus, CalendarDays, RotateCcw } from "lucide-react";
+import { formatteerMaandNaam, maandSleutel } from "@/lib/calculations/maand";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 import { Switch } from "@/components/ui/Switch";
 import { registreerNieuweMaand } from "@/app/(dashboard)/dashboard/actions";
@@ -26,6 +26,13 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
   const [nieuweMaand, setNieuweMaand] = useState(huidigeMaand);
   const [kopieren, setKopieren] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [vandaag, setVandaag] = useState<string | null>(null);
+
+  // Pas na mount bepalen (i.p.v. tijdens SSR) om een hydration-mismatch
+  // door tijdzoneverschillen tussen server en browser te vermijden.
+  useEffect(() => {
+    setVandaag(maandSleutel(new Date()));
+  }, []);
 
   const index = alleMaanden.indexOf(huidigeMaand);
   const vorige = index > 0 ? alleMaanden[index - 1] : null;
@@ -78,6 +85,11 @@ export function MaandKop({ huidigeMaand, alleMaanden }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
+          {vandaag && vandaag !== huidigeMaand && (
+            <Link href={`/dashboard/${vandaag}`} className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
+              <RotateCcw size={16} strokeWidth={2.25} /> Naar huidige maand
+            </Link>
+          )}
           <Link href="/overzicht" className="knop-secundair !min-h-[38px] !px-4 !text-sm gap-1.5">
             <CalendarDays size={16} strokeWidth={2.25} /> Overzicht
           </Link>
