@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import type { DashboardData } from "@/lib/data/dashboard";
 import {
   berekenTotaalInkomen,
   berekenOpenstaandBedrag,
   berekenNogTeBetalen,
   berekenWatOverblijft,
-  berekenPeriodeProjectie,
   berekenBijdragenAftrekVoorMaand,
   genereerVoorstellenBijTekort,
 } from "@/lib/calculations";
-import { PeriodeSelector, type Periode } from "@/components/dashboard/PeriodeSelector";
 import { MaandKop } from "@/components/dashboard/MaandKop";
 import { SamenvattingKaarten } from "@/components/dashboard/SamenvattingKaarten";
 import { InkomenSectie } from "@/components/dashboard/InkomenSectie";
@@ -49,8 +47,6 @@ export function DashboardClient({
   basisPad?: string;
   toonOverzicht?: boolean;
 }) {
-  const [periode, setPeriode] = useState<Periode>(1);
-
   // Next.js onthoudt soms de scrollpositie van een eerder bezoek aan
   // dezelfde URL. Bij het wisselen van maand moet je altijd bovenaan
   // dat nieuwe dashboard landen, dus forceren we dat expliciet i.p.v.
@@ -59,28 +55,6 @@ export function DashboardClient({
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [huidigeMaand]);
 
-  const projectie = useMemo(
-    () =>
-      berekenPeriodeProjectie({
-        inkomen: data.inkomen,
-        extraInkomenHuidigeMaand: data.extraInkomen,
-        vasteKosten: data.vasteKosten,
-        facturen: data.facturen,
-        extraUitgaven: data.extraUitgaven,
-        doelBijdragen: data.doelBijdragen,
-        startMaand: huidigeMaand,
-        aantalMaanden: periode,
-      }),
-    [data, huidigeMaand, periode]
-  );
-
-  // Rij 1: som over de geselecteerde periode (bij 1 maand = gewoon de bekeken maand).
-  const totaalInkomen = useMemo(() => projectie.reduce((s, m) => s + m.inkomen, 0), [projectie]);
-  const openstaandBedrag = useMemo(() => projectie.reduce((s, m) => s + m.uitgaven, 0), [projectie]);
-  const watOverblijft = berekenWatOverblijft(totaalInkomen, openstaandBedrag);
-
-  // Cijfers van de bekeken maand zelf (ongeacht periode) — nodig voor de
-  // wat-als-simulatie en tekort-voorstellen, die altijd over die ene maand gaan.
   const inkomenHuidigeMaand = useMemo(
     () =>
       berekenTotaalInkomen({
@@ -143,45 +117,15 @@ export function DashboardClient({
         />
       </ScrollReveal>
 
-      <PeriodeSelector waarde={periode} onWijzig={setPeriode} />
-
       <ScrollReveal>
         <SamenvattingKaarten
-          totaalInkomen={totaalInkomen}
-          openstaandBedrag={openstaandBedrag}
-          watOverblijft={watOverblijft}
+          totaalInkomen={inkomenHuidigeMaand}
+          openstaandBedrag={uitgavenHuidigeMaand}
+          watOverblijft={watOverblijftHuidigeMaand}
           betaaldHuidigeMaand={betaaldHuidigeMaand}
           nogTeBetalenHuidigeMaand={nogTeBetalenHuidigeMaand}
         />
       </ScrollReveal>
-
-      {periode > 1 && (
-        <div className="kaart overflow-x-auto animate-fade-in">
-          <h2 className="text-lg font-bold tracking-tight mb-4">Projectie per maand</h2>
-          <table className="w-full text-sm min-w-[400px]">
-            <thead>
-              <tr className="text-left text-tekst-secundair">
-                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Maand</th>
-                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Inkomen</th>
-                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Uitgaven</th>
-                <th className="pb-2 text-[11px] uppercase tracking-wide font-semibold">Saldo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projectie.map((m) => (
-                <tr key={m.maand} className="border-t border-rand/70">
-                  <td className="py-2.5 font-medium">{m.maand}</td>
-                  <td className="py-2.5 tabular-nums">€{m.inkomen.toFixed(2)}</td>
-                  <td className="py-2.5 tabular-nums">€{m.uitgaven.toFixed(2)}</td>
-                  <td className={`py-2.5 font-bold tabular-nums ${m.saldo >= 0 ? "text-succes" : "text-tekort"}`}>
-                    €{m.saldo.toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       <ScrollReveal>
         <GrafiekenSectie

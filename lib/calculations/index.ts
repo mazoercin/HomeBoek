@@ -5,5 +5,4 @@ export * from "./uitgaven";
 export * from "./saldo";
 export * from "./watAls";
 export * from "./doelen";
-export * from "./projectie";
 export * from "./voorstellen";
