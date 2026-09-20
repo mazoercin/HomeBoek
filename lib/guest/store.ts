@@ -26,6 +26,8 @@ export interface GastData {
   doelBijdragen: DoelBijdrage[];
   investeringen: Investering[];
   investeringTransacties: InvesteringTransactie[];
+  /** Bewaarde volgorde van de sleepbare dashboard-kaarten — null zolang niemand nog iets versleepte. */
+  dashboardVolgorde: string[] | null;
 }
 
 export function leegGastMaand(): GastMaandData {
@@ -33,7 +35,7 @@ export function leegGastMaand(): GastMaandData {
 }
 
 export function leegGastData(): GastData {
-  return { maanden: {}, doelen: [], doelBijdragen: [], investeringen: [], investeringTransacties: [] };
+  return { maanden: {}, doelen: [], doelBijdragen: [], investeringen: [], investeringTransacties: [], dashboardVolgorde: null };
 }
 
 /** Leest de gast-data uit localStorage. Geeft altijd een geldige (evt. lege) structuur terug, nooit null/undefined. */

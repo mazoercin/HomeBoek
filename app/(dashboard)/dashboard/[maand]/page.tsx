@@ -27,6 +27,7 @@ import {
   voegInkomenToe,
   verwijderInkomen,
   registreerNieuweMaand,
+  zetDashboardVolgorde,
 } from "../actions";
 import { wisHouseholdData } from "@/app/gezin/actions";
 import type { DashboardActies } from "@/types/dashboard-acties";
@@ -54,6 +55,7 @@ const ECHTE_ACTIES: DashboardActies = {
   voegInkomenToe,
   verwijderInkomen,
   wisData: wisHouseholdData,
+  zetDashboardVolgorde,
 };
 
 const MAAND_PATROON = /^\d{4}-\d{2}$/;
@@ -102,6 +104,7 @@ export default async function DashboardMaandPagina({ params }: { params: { maand
       alleMaanden={alleMaanden}
       acties={ECHTE_ACTIES}
       onRegistreerMaand={registreerNieuweMaand}
+      dashboardVolgorde={context.dashboardVolgorde}
     />
   );
 }

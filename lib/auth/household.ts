@@ -11,6 +11,8 @@ export interface HouseholdContext {
   householdNaam: string;
   currency: string;
   rol: HouseholdRol;
+  /** Bewaarde volgorde van de sleepbare dashboard-kaarten — null zolang niemand nog iets versleepte. */
+  dashboardVolgorde: string[] | null;
 }
 
 /**
@@ -37,7 +39,7 @@ export async function vereisHousehold(): Promise<HouseholdContext> {
 
   const { data, error } = await supabase
     .from("household_members")
-    .select("household_id, role, households(name, currency)")
+    .select("household_id, role, households(name, currency, dashboard_kaart_volgorde)")
     .eq("user_id", sessie.gebruikerId)
     .order("joined_at", { ascending: false })
     .limit(1)
@@ -65,6 +67,7 @@ export async function vereisHousehold(): Promise<HouseholdContext> {
     householdNaam: household?.name ?? "Ons gezin",
     currency: household?.currency ?? "EUR",
     rol: data.role as HouseholdRol,
+    dashboardVolgorde: household?.dashboard_kaart_volgorde ?? null,
   };
 }
 

@@ -71,6 +71,8 @@ export interface DashboardActies {
   verwijderInkomen: (id: string) => Resultaat;
   /** Wist alle data (alle maanden, doelen, investeringen) — enkel bereikbaar voor owner/gast. */
   wisData: () => Resultaat;
+  /** Bewaart de nieuwe volgorde van de sleepbare dashboard-kaarten — gedeeld door het hele huishouden. */
+  zetDashboardVolgorde: (volgorde: string[]) => Resultaat;
 }
 
 export type RegistreerMaandActie = (nieuweMaand: string, kopieerVan: string | null) => Resultaat;

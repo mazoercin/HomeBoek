@@ -75,6 +75,7 @@ export default function GastDashboardPagina({ params }: { params: { maand: strin
         onRegistreerMaand={onRegistreerMaand}
         basisPad="/gast"
         toonOverzicht={false}
+        dashboardVolgorde={gastData.dashboardVolgorde}
       />
     </div>
   );

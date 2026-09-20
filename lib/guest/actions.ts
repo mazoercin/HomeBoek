@@ -199,7 +199,18 @@ export function maakGastActies(huidigeMaand: string, zetData: ZetData): Dashboar
       pas((data) => metMaand(data, huidigeMaand, (m) => ({ ...m, inkomen: m.inkomen.filter((i) => i.id !== id) }))),
 
     wisData: () =>
-      pas(() => ({ maanden: {}, doelen: [], doelBijdragen: [], investeringen: [], investeringTransacties: [] })),
+      // dashboardVolgorde is een schikvoorkeur, geen budgetdata — blijft
+      // bewust behouden bij het wissen van alle gezinsfinanciën.
+      pas((data) => ({
+        maanden: {},
+        doelen: [],
+        doelBijdragen: [],
+        investeringen: [],
+        investeringTransacties: [],
+        dashboardVolgorde: data.dashboardVolgorde,
+      })),
+
+    zetDashboardVolgorde: (volgorde) => pas((data) => ({ ...data, dashboardVolgorde: volgorde })),
   };
 }
 

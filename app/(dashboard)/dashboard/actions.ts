@@ -43,6 +43,20 @@ async function veiligUitvoeren(
   }
 }
 
+// ---------- Dashboard-lay-out ----------
+
+/** Bewaart de sleep-volgorde van de dashboard-kaarten — gedeeld door het hele huishouden (zie migratie 0021). */
+export async function zetDashboardVolgorde(volgorde: string[]) {
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
+  return veiligUitvoeren(
+    "DB_001",
+    "Kon dashboard-volgorde niet opslaan",
+    { householdId: context.householdId },
+    () => supabase.rpc("zet_dashboard_volgorde", { p_household_id: context.householdId, p_volgorde: volgorde })
+  );
+}
+
 // ---------- Betaald/geskipt-status (gewoon een kolom op de rij zelf) ----------
 
 export async function zetVasteKostBetaald(id: string, betaald: boolean) {
