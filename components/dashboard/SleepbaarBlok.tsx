@@ -8,6 +8,8 @@ interface Props {
   id: string;
   actief: boolean;
   children: React.ReactNode;
+  /** Grid-kolombreedte (bv. "md:col-span-6") — bepaalt hoe breed dit kader op tablet/pc naast andere kaders staat. */
+  className?: string;
 }
 
 /**
@@ -24,7 +26,7 @@ interface Props {
  * staat. Altijd zichtbaar (niet enkel bij hover) zodat het ook op
  * mobiel/touch werkt, waar "hover" niet bestaat.
  */
-export function SleepbaarBlok({ id, actief, children }: Props) {
+export function SleepbaarBlok({ id, actief, children, className = "" }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled: !actief,
@@ -38,7 +40,7 @@ export function SleepbaarBlok({ id, actief, children }: Props) {
   };
 
   return (
-    <div ref={setNodeRef} style={stijl} data-testid={`dashboard-blok-${id}`}>
+    <div ref={setNodeRef} style={stijl} className={className} data-testid={`dashboard-blok-${id}`}>
       {actief && (
         <div className="flex justify-end mb-1">
           <button

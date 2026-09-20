@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { RotateCcw } from "lucide-react";
 import type { DashboardData } from "@/lib/data/dashboard";
 import {
@@ -60,6 +60,19 @@ function samenstellenVolgorde(opgeslagen: string[] | null): string[] {
   const uitOpslag = (opgeslagen ?? []).filter((id) => geldig.has(id));
   const ontbrekend = STANDAARD_VOLGORDE.filter((id) => !uitOpslag.includes(id));
   return [...uitOpslag, ...ontbrekend];
+}
+
+/**
+ * Grid-kolombreedte per kader op tablet/pc (grid van 6 kolommen), zodat
+ * verwante kaarten naast elkaar staan zoals vroeger (kosten met z'n
+ * drieën naast elkaar, doelen/investeringen naast elkaar), terwijl elk
+ * kader wel apart versleepbaar blijft. Op mobiel (< md) is de grid altijd
+ * 1 kolom, dus daar staat sowieso alles onder elkaar.
+ */
+function kolomBreedte(id: string): string {
+  if (id === "kosten-vast" || id === "kosten-facturen" || id === "kosten-extra") return "md:col-span-2";
+  if (id === "doelen" || id === "investeringen") return "md:col-span-3";
+  return "md:col-span-6";
 }
 
 export function DashboardClient({
@@ -441,10 +454,10 @@ export function DashboardClient({
       )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={opDragEinde}>
-        <SortableContext items={zichtbareVolgorde} strategy={verticalListSortingStrategy}>
-          <div className="space-y-6 lg:space-y-8">
+        <SortableContext items={zichtbareVolgorde} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 lg:gap-8">
             {zichtbareVolgorde.map((id) => (
-              <SleepbaarBlok key={id} id={id} actief={magSlepen}>
+              <SleepbaarBlok key={id} id={id} actief={magSlepen} className={kolomBreedte(id)}>
                 {blokken[id]?.element}
               </SleepbaarBlok>
             ))}
