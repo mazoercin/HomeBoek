@@ -17,8 +17,8 @@ export default function LoginPagina() {
           <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-gradient-primair shadow-lg shadow-primair/25 mb-4">
             <PiggyBank size={30} color="#ffffff" strokeWidth={2} />
           </div>
-          <h1 className="text-2xl font-extrabold text-tekst-primair tracking-tight">Saldo</h1>
-          <p className="text-tekst-secundair mt-1">Jullie gezinsfinanciën, overzichtelijk.</p>
+          <h1 className="text-2xl font-extrabold text-tekst-primair tracking-tight">HuisBalans</h1>
+          <p className="text-tekst-secundair mt-1">je digitale huishoudboekje voor het hele gezin</p>
         </div>
 
         <div className="kaart shadow-card-hover">

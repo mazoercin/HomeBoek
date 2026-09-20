@@ -1,4 +1,4 @@
-# Saldo — HuisBoek
+# HuisBalans
 
 Gezinsfinanciën overzichtelijk beheren: inkomen, vaste kosten, facturen,
 extra uitgaven, doelen en goud-investering, met instant berekeningen.

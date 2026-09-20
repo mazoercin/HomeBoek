@@ -1,4 +1,4 @@
-/** Merk-lockup: het app-icoon + de naam "HomeBoek", herbruikbaar in de navbar en op auth-pagina's. */
+/** Merk-lockup: het app-icoon + de naam "HuisBalans", herbruikbaar in de navbar en op auth-pagina's. */
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2 select-none">
@@ -18,7 +18,7 @@ export function Logo({ compact = false }: { compact?: boolean }) {
         </svg>
       </span>
       <span className={`font-extrabold tracking-tight text-tekst-primair ${compact ? "text-[15px]" : "text-lg"}`}>
-        Home<span className="text-primair">Boek</span>
+        Huis<span className="text-primair">Balans</span>
       </span>
     </span>
   );

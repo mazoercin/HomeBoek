@@ -20,7 +20,7 @@ const LINKS = [
 const MAAND_IN_PAD = /^\/dashboard\/(\d{4}-\d{2})/;
 
 /**
- * Eén dunne, vaste kopbalk met het HomeBoek-logo, altijd zichtbaar.
+ * Eén dunne, vaste kopbalk met het HuisBalans-logo, altijd zichtbaar.
  * Op desktop staan de nav-links gewoon rechts in diezelfde balk. Op
  * mobiel zit alle navigatie achter een hamburger-knop: die klapt
  * vloeiend een menu open onder de kopbalk (i.p.v. een drukke tab-bar
