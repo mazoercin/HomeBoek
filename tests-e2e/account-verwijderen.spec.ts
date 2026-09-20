@@ -24,7 +24,7 @@ test.describe("Gast-modus: geen accountverwijdering mogelijk", () => {
     await page.goto("/gast");
     await page.waitForURL(/\/gast\/\d{4}-\d{2}/);
     await expect(page.getByText(/Je probeert dit uit zonder account/)).toBeVisible();
-    await expect(page.getByText(/enkel op dit\s*toestel bewaard/)).toBeVisible();
+    await expect(page.getByText(/blijft lokaal in je\s*browser/)).toBeVisible();
   });
 });
 

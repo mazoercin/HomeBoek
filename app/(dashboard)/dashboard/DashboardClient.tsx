@@ -480,10 +480,12 @@ export function DashboardClient({
   return (
     <div className="space-y-6 lg:space-y-8">
       <div>
-        <h1 className="flex items-center gap-2.5 text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">
+        <h1 className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">
           {householdNaam}
-          <Scale size={26} className="text-primair shrink-0" strokeWidth={2.25} aria-hidden />
-          <span className="text-primair">Gezinsfinanciën</span>
+          <span className="inline-flex items-center gap-2.5 text-primair">
+            <Scale size={26} className="shrink-0" strokeWidth={2.25} aria-hidden />
+            Gezinsfinanciën
+          </span>
         </h1>
         <p className="text-sm text-tekst-secundair mt-0.5">Alles overzichtelijk op één plek.</p>
       </div>
