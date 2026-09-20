@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { maakServerClient } from "@/lib/supabase/server";
 import { requireSessie } from "@/lib/auth/require-role";
-import { haalUitnodigingToken } from "@/lib/auth/uitnodiging-cookie";
 import { logger } from "@/lib/logger.server";
 import type { HouseholdRol } from "@/types/database";
 
@@ -54,10 +53,7 @@ export async function vereisHousehold(): Promise<HouseholdContext> {
   }
 
   if (!data) {
-    // Kwam de gebruiker net via een uitnodigingslink en registreerde die
-    // zich onderweg? Dan wacht er een bewaarde token — rond dat eerst af
-    // i.p.v. de "nieuw huishouden starten"-stap te tonen.
-    redirect(haalUitnodigingToken() ? "/uitnodiging" : "/gezin/starten");
+    redirect("/gezin/starten");
   }
 
   const household = Array.isArray(data.households) ? data.households[0] : data.households;

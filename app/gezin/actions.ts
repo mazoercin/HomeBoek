@@ -1,29 +1,31 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { maakServerClient } from "@/lib/supabase/server";
-import { requireSessie } from "@/lib/auth/require-role";
-import { haalSessie } from "@/lib/auth/session";
+import { maakServerClient, maakServiceClient } from "@/lib/supabase/server";
 import { vereisHousehold, vereisHouseholdRol } from "@/lib/auth/household";
-import { genereerUitnodigingsToken, hashUitnodigingsToken } from "@/lib/auth/uitnodiging";
+import { maakGebruikersProfiel } from "@/lib/auth/gebruiker";
+import { valideerGebruikersnaamFormaat } from "@/lib/auth/gebruikersnaam";
 import { haalIpHash, magDoor, registreerPoging } from "@/lib/auth/rate-limit";
-import { wisUitnodigingToken } from "@/lib/auth/uitnodiging-cookie";
 import { logger } from "@/lib/logger.server";
 import type { HouseholdRol, Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
 
-function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://home-boek.vercel.app";
-}
+// ---------- Gezinsaccounts ----------
+// De eigenaar maakt logins voor gezinsleden rechtstreeks zelf aan
+// (i.p.v. een deelbare link te versturen die de ontvanger zelf moet
+// registreren+bevestigen+accepteren) — het account bestaat al mét
+// toegang tot dit huishouden vanaf de eerste seconde. Max. 2 extra
+// leden per huishouden.
 
-// ---------- Uitnodigingen ----------
+const MAX_EXTRA_LEDEN = 2;
 
-export async function maakUitnodiging(input: {
+export async function maakGezinsAccount(input: {
+  gebruikersnaam: string;
+  wachtwoord: string;
   rol: "editor" | "viewer";
   email: string | null;
-  geldigheidUren: number;
-  maxGebruik: number;
-}): Promise<{ gelukt: boolean; foutmelding?: string; link?: string }> {
+}): Promise<{ gelukt: boolean; foutmelding?: string }> {
   const context = await vereisHouseholdRol("owner");
   const ipHash = haalIpHash();
 
@@ -31,172 +33,126 @@ export async function maakUitnodiging(input: {
     return { gelukt: false, foutmelding: "Te veel pogingen, probeer het later opnieuw." };
   }
 
-  const token = genereerUitnodigingsToken();
-  const tokenHash = hashUitnodigingsToken(token);
-  const supabase = maakServerClient();
-
-  const { error } = await supabase.from("household_invites").insert({
-    household_id: context.householdId,
-    token_hash: tokenHash,
-    role: input.rol,
-    email: input.email,
-    created_by: context.gebruikerId,
-    expires_at: new Date(Date.now() + input.geldigheidUren * 60 * 60 * 1000).toISOString(),
-    max_uses: input.maxGebruik,
-  });
-
-  await registreerPoging("aanmaken", ipHash, context.gebruikerId, !error);
-
-  if (error) {
-    logger.error({
-      code: "DB_001",
-      message: "Kon uitnodiging niet aanmaken",
-      context: { householdId: context.householdId, error: error.message },
-    });
-    return { gelukt: false, foutmelding: "Kon de uitnodiging niet aanmaken." };
+  const gebruikersnaam = input.gebruikersnaam.trim();
+  const formaatFout = valideerGebruikersnaamFormaat(gebruikersnaam);
+  if (formaatFout) {
+    return { gelukt: false, foutmelding: formaatFout };
+  }
+  if (input.wachtwoord.length < 8) {
+    return { gelukt: false, foutmelding: "Wachtwoord moet minstens 8 tekens lang zijn." };
   }
 
-  revalidatePath("/instellingen");
-  return { gelukt: true, link: `${siteUrl()}/uitnodiging#${token}` };
-}
+  const supabase = maakServiceClient();
 
-export async function trekUitnodigingIn(id: string): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  const context = await vereisHouseholdRol("owner");
-  const supabase = maakServerClient();
+  const { count } = await supabase
+    .from("household_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("household_id", context.householdId)
+    .neq("role", "owner");
+  if ((count ?? 0) >= MAX_EXTRA_LEDEN) {
+    return { gelukt: false, foutmelding: `Je kan max. ${MAX_EXTRA_LEDEN} extra gebruikers toevoegen.` };
+  }
 
-  const { error } = await supabase
-    .from("household_invites")
-    .update({ revoked_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("household_id", context.householdId);
+  const { data: bestaandProfiel } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .ilike("gebruikersnaam", gebruikersnaam)
+    .maybeSingle();
+  if (bestaandProfiel) {
+    return { gelukt: false, foutmelding: "Deze gebruikersnaam is al in gebruik." };
+  }
 
-  if (error) {
-    logger.error({ code: "DB_001", message: "Kon uitnodiging niet intrekken", context: { id, error: error.message } });
-    return { gelukt: false, foutmelding: "Kon de uitnodiging niet intrekken." };
+  // Supabase Auth vereist altijd een e-mailadres — vult de eigenaar er
+  // zelf geen in, dan gebruiken we een intern, nooit-getoond adres.
+  // Enkel de gebruikersnaam wordt gebruikt om in te loggen.
+  const email = input.email?.trim() || `${gebruikersnaam.toLowerCase()}.${randomBytes(4).toString("hex")}@leden.homeboek.intern`;
+
+  const { data: nieuweGebruiker, error: createError } = await supabase.auth.admin.createUser({
+    email,
+    password: input.wachtwoord,
+    email_confirm: true,
+    user_metadata: { gebruikersnaam },
+  });
+
+  await registreerPoging("aanmaken", ipHash, context.gebruikerId, !createError);
+
+  if (createError || !nieuweGebruiker.user) {
+    logger.error({
+      code: "DB_001",
+      message: "Kon gezinsaccount niet aanmaken",
+      context: { householdId: context.householdId, error: createError?.message },
+    });
+    const bestaatAl = createError?.message?.toLowerCase().includes("already been registered");
+    return {
+      gelukt: false,
+      foutmelding: bestaatAl ? "Er bestaat al een account met dit e-mailadres." : "Kon het account niet aanmaken.",
+    };
+  }
+
+  const profiel = await maakGebruikersProfiel({ id: nieuweGebruiker.user.id, email, gebruikersnaam });
+  if (!profiel) {
+    await supabase.auth.admin.deleteUser(nieuweGebruiker.user.id);
+    return { gelukt: false, foutmelding: "Account aangemaakt, maar profiel opslaan mislukte." };
+  }
+
+  const { error: lidError } = await supabase.from("household_members").insert({
+    household_id: context.householdId,
+    user_id: nieuweGebruiker.user.id,
+    role: input.rol,
+    display_name: gebruikersnaam,
+    invited_by: context.gebruikerId,
+  });
+  if (lidError) {
+    await supabase.auth.admin.deleteUser(nieuweGebruiker.user.id);
+    logger.error({
+      code: "DB_001",
+      message: "Kon nieuw lid niet aan huishouden koppelen",
+      context: { householdId: context.householdId, error: lidError.message },
+    });
+    return { gelukt: false, foutmelding: "Kon dit account niet aan het huishouden koppelen." };
   }
 
   revalidatePath("/instellingen");
   return { gelukt: true };
 }
 
-const FOUT_TEKSTEN: Record<string, string> = {
-  ongeldig: "Deze link is ongeldig.",
-  ingetrokken: "Deze uitnodiging is ingetrokken.",
-  verlopen: "Deze uitnodiging is verlopen.",
-  opgebruikt: "Deze uitnodiging is al gebruikt.",
-  email_niet_bevestigd: "Bevestig eerst je e-mailadres voor je deze uitnodiging aanvaardt.",
-  ander_emailadres: "Deze uitnodiging is voor een ander e-mailadres.",
-  al_lid: "Je bent al lid van dit gezin.",
-  niet_ingelogd: "Log eerst in.",
-};
-
-interface UitnodigingLookup {
-  household_naam: string | null;
-  uitgenodigd_door: string | null;
-  rol: string | null;
-  geldig: boolean;
-  reden: string | null;
-}
-
-/**
- * Enkel voor een publieke, veilige weergave (naam huishouden, uitnodiger, rol) — nooit budgetdata.
- *
- * Is de bezoeker al ingelogd én al lid van een ánder huishouden (bv. het
- * eigen huishouden dat automatisch werd aangemaakt bij registratie), dan
- * geven we ook diens huidige huishoudnaam mee — zodat het uitnodigings-
- * scherm expliciet kan waarschuwen dat toetreden hun huidige dashboard
- * vervangt, in plaats van dat dat stilzwijgend gebeurt.
- */
-export async function bekijkUitnodiging(
-  token: string
-): Promise<{
-  geldig: boolean;
-  householdNaam?: string;
-  uitgenodigdDoor?: string;
-  rol?: string;
-  foutmelding?: string;
-  huidigHouseholdNaam?: string;
-}> {
-  const tokenHash = hashUitnodigingsToken(token);
-  const supabase = maakServerClient();
-  const { data, error } = await supabase
-    .rpc("find_invite_by_token", { p_token_hash: tokenHash })
-    .single<UitnodigingLookup>();
-
-  if (error || !data) {
-    return { geldig: false, foutmelding: "Deze link is ongeldig." };
-  }
-  if (!data.geldig) {
-    return { geldig: false, foutmelding: FOUT_TEKSTEN[data.reden ?? ""] ?? "Deze link is niet meer geldig." };
-  }
-
-  let huidigHouseholdNaam: string | undefined;
-  const sessie = haalSessie();
-  if (sessie) {
-    const { data: eigenLid } = await supabase
-      .from("household_members")
-      .select("households(name)")
-      .eq("user_id", sessie.gebruikerId)
-      .order("joined_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const eigenHousehold = eigenLid
-      ? Array.isArray(eigenLid.households)
-        ? eigenLid.households[0]
-        : eigenLid.households
-      : null;
-    if (eigenHousehold?.name && eigenHousehold.name !== data.household_naam) {
-      huidigHouseholdNaam = eigenHousehold.name;
-    }
-  }
-
-  return {
-    geldig: true,
-    householdNaam: data.household_naam ?? undefined,
-    uitgenodigdDoor: data.uitgenodigd_door ?? undefined,
-    rol: data.rol ?? undefined,
-    huidigHouseholdNaam,
-  };
-}
-
-export async function accepteerUitnodiging(
-  token: string
+/** Enkel voor een account dat al bij je eigen huishouden hoort — de eigenaar kan zo op elk moment het wachtwoord van een gezinslid resetten. */
+export async function resetLidWachtwoord(
+  userId: string,
+  nieuwWachtwoord: string
 ): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  const sessie = await requireSessie();
-  const ipHash = haalIpHash();
+  const context = await vereisHouseholdRol("owner");
 
-  if (!(await magDoor("accept", ipHash, sessie.gebruikerId))) {
+  if (nieuwWachtwoord.length < 8) {
+    return { gelukt: false, foutmelding: "Wachtwoord moet minstens 8 tekens lang zijn." };
+  }
+
+  const ipHash = haalIpHash();
+  if (!(await magDoor("aanmaken", ipHash, context.gebruikerId))) {
     return { gelukt: false, foutmelding: "Te veel pogingen, probeer het later opnieuw." };
   }
 
-  const tokenHash = hashUitnodigingsToken(token);
-  const supabase = maakServerClient();
-  const { data, error } = await supabase
-    .rpc("accept_invite", { p_token_hash: tokenHash })
-    .single<{ household_id: string | null; ok: boolean; reden: string | null }>();
+  const supabase = maakServiceClient();
 
-  await registreerPoging("accept", ipHash, sessie.gebruikerId, !error && !!data?.ok);
-
-  if (error || !data) {
-    // Bewust afgewacht (i.p.v. het gebruikelijke fire-and-forget): dit
-    // logboekbericht is het enige spoor van de échte oorzaak, en stond
-    // vlak vóór een `return` — precies het patroon waarbij Vercel's
-    // serverless runtime een niet-afgewachte databaseschrijf kan killen
-    // vóór hij voltooit, zodat de fout onopgemerkt in het logboek ontbrak.
-    await logger.error({
-      code: "DB_001",
-      message: "Kon uitnodiging niet accepteren",
-      context: { gebruikerId: sessie.gebruikerId, error: error?.message },
-    });
-    return { gelukt: false, foutmelding: "Er ging iets mis." };
-  }
-  if (!data.ok) {
-    return { gelukt: false, foutmelding: FOUT_TEKSTEN[data.reden ?? ""] ?? "Kon de uitnodiging niet verwerken." };
+  const { data: lid } = await supabase
+    .from("household_members")
+    .select("user_id")
+    .eq("household_id", context.householdId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!lid) {
+    return { gelukt: false, foutmelding: "Dit account hoort niet bij jouw huishouden." };
   }
 
-  wisUitnodigingToken();
-  revalidatePath("/dashboard/[maand]", "page");
-  redirect("/dashboard");
+  const { error } = await supabase.auth.admin.updateUserById(userId, { password: nieuwWachtwoord });
+  await registreerPoging("aanmaken", ipHash, context.gebruikerId, !error);
+
+  if (error) {
+    logger.error({ code: "DB_001", message: "Kon wachtwoord niet resetten", context: { userId, error: error.message } });
+    return { gelukt: false, foutmelding: "Kon het wachtwoord niet wijzigen." };
+  }
+
+  return { gelukt: true };
 }
 
 // ---------- Ledenbeheer ----------

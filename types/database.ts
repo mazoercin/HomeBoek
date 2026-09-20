@@ -36,20 +36,6 @@ export interface HouseholdLid {
   invited_by: string | null;
 }
 
-export interface HouseholdUitnodiging {
-  id: string;
-  household_id: string;
-  token_hash: string;
-  role: "editor" | "viewer";
-  email: string | null;
-  created_by: string;
-  created_at: string;
-  expires_at: string;
-  max_uses: number;
-  use_count: number;
-  revoked_at: string | null;
-}
-
 export interface ActiviteitLogRegel {
   id: string;
   household_id: string;

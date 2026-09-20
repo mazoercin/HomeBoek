@@ -20,10 +20,10 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4" noValidate>
       <div>
-        <label htmlFor="email" className="veld-label">
-          E-mailadres
+        <label htmlFor="identificator" className="veld-label">
+          Gebruikersnaam
         </label>
-        <input id="email" name="email" type="email" autoComplete="email" required className="veld-input" />
+        <input id="identificator" name="identificator" type="text" autoComplete="username" required className="veld-input" />
       </div>
 
       <div>

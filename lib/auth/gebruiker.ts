@@ -2,6 +2,24 @@ import { maakServiceClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import type { Profiel } from "@/types/database";
 
+/**
+ * Zoekt het e-mailadres achter een gebruikersnaam op — nodig omdat
+ * Supabase Auth zelf altijd op e-mailadres inlogt, terwijl deze app
+ * gebruikersnaam als login-identificator toont. Bewust met de service-
+ * role: vóór het inloggen is er nog geen sessie, dus de normale
+ * RLS-scoped client (die enkel je éigen profiel mag lezen) volstaat hier
+ * niet. Bevat een "@" (dus mogelijk al een e-mailadres, voor wie dat
+ * gewoontegetrouw intikt), dan gewoon dat teruggeven — geen extra
+ * opzoeking nodig.
+ */
+export async function haalEmailVoorIdentificator(identificator: string): Promise<string | null> {
+  if (identificator.includes("@")) return identificator.toLowerCase();
+
+  const supabase = maakServiceClient();
+  const { data } = await supabase.from("profiles").select("email").ilike("gebruikersnaam", identificator).maybeSingle();
+  return data?.email ?? null;
+}
+
 /** Haalt het profiel op bij een Supabase Auth-gebruikers-id. */
 export async function haalGebruikersProfiel(userId: string): Promise<Profiel | null> {
   const supabase = maakServiceClient();

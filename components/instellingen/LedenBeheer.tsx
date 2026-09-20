@@ -15,6 +15,7 @@ interface Props {
   onVerwijderen: (userId: string) => ActieResultaat;
   onEigenaarschapOverdragen: (userId: string) => ActieResultaat;
   onVerlaten: () => ActieResultaat;
+  onWachtwoordResetten: (userId: string, nieuwWachtwoord: string) => ActieResultaat;
 }
 
 function formatteerDatum(iso: string): string {
@@ -31,6 +32,7 @@ function LidRij({
   onVerwijderen,
   onEigenaarschapOverdragen,
   onVerlaten,
+  onWachtwoordResetten,
 }: {
   lid: HouseholdLidMetProfiel;
   isJezelf: boolean;
@@ -39,6 +41,7 @@ function LidRij({
   onVerwijderen: Props["onVerwijderen"];
   onEigenaarschapOverdragen: Props["onEigenaarschapOverdragen"];
   onVerlaten: Props["onVerlaten"];
+  onWachtwoordResetten: Props["onWachtwoordResetten"];
 }) {
   const [isPending, startTransition] = useTransition();
   const [fout, setFout] = useState<string | null>(null);
@@ -103,6 +106,27 @@ function LidRij({
               type="button"
               disabled={isPending}
               onClick={() => {
+                const nieuw = prompt(`Nieuw wachtwoord voor ${naam} (minstens 8 tekens):`);
+                if (!nieuw) return;
+                if (nieuw.length < 8) {
+                  setFout("Wachtwoord moet minstens 8 tekens lang zijn.");
+                  return;
+                }
+                startTransition(async () => {
+                  const res = await onWachtwoordResetten(lid.user_id, nieuw);
+                  if (!res.gelukt) setFout(res.foutmelding ?? "Kon wachtwoord niet resetten.");
+                });
+              }}
+              className="knop-secundair !min-h-[34px] !px-3 !text-xs"
+            >
+              Wachtwoord resetten
+            </button>
+          )}
+          {isOwner && lid.role !== "owner" && (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
                 if (confirm(`${naam} uit het gezin verwijderen?`)) {
                   startTransition(async () => {
                     const res = await onVerwijderen(lid.user_id);
@@ -147,6 +171,7 @@ export function LedenBeheer({
   onVerwijderen,
   onEigenaarschapOverdragen,
   onVerlaten,
+  onWachtwoordResetten,
 }: Props) {
   return (
     <div className="kaart">
@@ -171,6 +196,7 @@ export function LedenBeheer({
             onVerwijderen={onVerwijderen}
             onEigenaarschapOverdragen={onEigenaarschapOverdragen}
             onVerlaten={onVerlaten}
+            onWachtwoordResetten={onWachtwoordResetten}
           />
         ))}
       </ul>

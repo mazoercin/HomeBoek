@@ -3,13 +3,13 @@ import { leesLogRegels } from "@/lib/logger.server";
 import { haalHouseholdOverzicht } from "@/lib/data/household";
 import { LogViewer } from "@/components/instellingen/LogViewer";
 import { HouseholdNaamKaart } from "@/components/instellingen/HouseholdNaamKaart";
-import { UitnodigenKaart } from "@/components/instellingen/UitnodigenKaart";
+import { GebruikersToevoegenKaart } from "@/components/instellingen/GebruikersToevoegenKaart";
 import { LedenBeheer } from "@/components/instellingen/LedenBeheer";
 import { wisLogboek } from "./actions";
 import {
   zetHouseholdInstellingen,
-  maakUitnodiging,
-  trekUitnodigingIn,
+  maakGezinsAccount,
+  resetLidWachtwoord,
   wijzigLidRol,
   verwijderLid,
   draagEigenaarschapOver,
@@ -27,6 +27,8 @@ export default async function InstellingenPagina() {
     haalHouseholdOverzicht(context.householdId),
     isOwner ? leesLogRegels(200) : Promise.resolve([]),
   ]);
+
+  const aantalExtraLeden = overzicht.leden.filter((lid) => lid.role !== "owner").length;
 
   return (
     <div className="space-y-6">
@@ -46,13 +48,7 @@ export default async function InstellingenPagina() {
         onOpslaan={zetHouseholdInstellingen}
       />
 
-      {isOwner && (
-        <UitnodigenKaart
-          openstaandeUitnodigingen={overzicht.openstaandeUitnodigingen}
-          onAanmaken={maakUitnodiging}
-          onIntrekken={trekUitnodigingIn}
-        />
-      )}
+      {isOwner && <GebruikersToevoegenKaart aantalExtraLeden={aantalExtraLeden} onAanmaken={maakGezinsAccount} />}
 
       <LedenBeheer
         leden={overzicht.leden}
@@ -62,6 +58,7 @@ export default async function InstellingenPagina() {
         onVerwijderen={verwijderLid}
         onEigenaarschapOverdragen={draagEigenaarschapOver}
         onVerlaten={verlaatHousehold}
+        onWachtwoordResetten={resetLidWachtwoord}
       />
 
       {isOwner && <LogViewer regels={regels} onWissen={wisLogboek} />}

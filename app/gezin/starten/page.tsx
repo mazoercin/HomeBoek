@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireSessie } from "@/lib/auth/require-role";
 import { maakServerClient } from "@/lib/supabase/server";
-import { haalUitnodigingToken } from "@/lib/auth/uitnodiging-cookie";
 import { logger } from "@/lib/logger.server";
 
 export const dynamic = "force-dynamic";
@@ -29,13 +28,6 @@ export default async function StartHouseholdPagina() {
 
   if (data) {
     redirect("/dashboard");
-  }
-
-  // Kwam de gebruiker via een uitnodigingslink (maar landde via een
-  // andere weg toch hier)? Dan hoort die eerst afgerond te worden i.p.v.
-  // meteen een eigen huishouden te krijgen.
-  if (haalUitnodigingToken()) {
-    redirect("/uitnodiging");
   }
 
   const { error } = await supabase.rpc("create_household", { p_name: "Ons gezin" });

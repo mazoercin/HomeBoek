@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { maakServerClient } from "@/lib/supabase/server";
 import { zetSessieCookie } from "@/lib/auth/session";
-import { haalGebruikersProfiel, maakGebruikersProfiel } from "@/lib/auth/gebruiker";
+import { haalGebruikersProfiel, maakGebruikersProfiel, haalEmailVoorIdentificator } from "@/lib/auth/gebruiker";
 import { logger } from "@/lib/logger.server";
 
 export interface LoginState {
@@ -14,21 +14,29 @@ function vertaalFout(bericht: string): string {
   if (bericht.toLowerCase().includes("email not confirmed")) {
     return "Bevestig eerst je e-mailadres via de link die we je gestuurd hebben.";
   }
-  return "E-mailadres of wachtwoord klopt niet.";
+  return "Gebruikersnaam of wachtwoord klopt niet.";
 }
 
 /**
- * Server Action voor de login-flow. Verifieert e-mail + wachtwoord via
- * Supabase Auth (nooit zelf wachtwoorden vergelijken/opslaan), en zet
- * daarna onze eigen lichte sessie-cookie op basis van het gekoppelde
- * gebruikersprofiel (gebruikersnaam + rol).
+ * Server Action voor de login-flow. Log in gebeurt op gebruikersnaam
+ * (niet e-mailadres) — die wordt hier eerst omgezet naar het bijhorende
+ * e-mailadres, want Supabase Auth zelf kent enkel e-mailadres. Verifieert
+ * daarna wachtwoord via Supabase Auth (nooit zelf wachtwoorden
+ * vergelijken/opslaan), en zet onze eigen lichte sessie-cookie op basis
+ * van het gekoppelde gebruikersprofiel.
  */
 export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const identificator = String(formData.get("identificator") ?? "").trim();
   const wachtwoord = String(formData.get("wachtwoord") ?? "");
 
-  if (!email || !wachtwoord) {
-    return { fout: "Vul e-mailadres en wachtwoord in." };
+  if (!identificator || !wachtwoord) {
+    return { fout: "Vul gebruikersnaam en wachtwoord in." };
+  }
+
+  const email = await haalEmailVoorIdentificator(identificator);
+  if (!email) {
+    logger.warn({ code: "AUTH_001", message: "Login mislukt: onbekende gebruikersnaam", context: { identificator } });
+    return { fout: "Gebruikersnaam of wachtwoord klopt niet." };
   }
 
   const supabase = maakServerClient();
@@ -38,7 +46,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
     logger.warn({
       code: "AUTH_001",
       message: "Login mislukt",
-      context: { email, error: error?.message ?? "geen gebruiker" },
+      context: { identificator, error: error?.message ?? "geen gebruiker" },
     });
     return { fout: vertaalFout(error?.message ?? "") };
   }
