@@ -38,6 +38,13 @@ async function schrijfNaarDatabase(input: { code: string; message: string; conte
       bericht: input.message,
       context: input.context ?? null,
     });
+    // Zelfde opruim-patroon als invite_pogingen (lib/auth/rate-limit.ts):
+    // best-effort, geen pg_cron nodig. 30 dagen i.p.v. 24 uur, want een
+    // logboek dient hier ook om iets dagen later nog te kunnen naspeuren.
+    await supabase
+      .from("applicatie_logs")
+      .delete()
+      .lt("aangemaakt_op", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
   } catch {
     // Een falende logger mag de applicatie nooit doen crashen. Als dit
     // faalt (bv. Supabase tijdelijk onbereikbaar), blijft de console-

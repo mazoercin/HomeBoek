@@ -49,7 +49,7 @@ function LidRij({
 
   return (
     <li className="rounded-xl border border-rand/70 p-3">
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3">
         <span
           className="inline-flex items-center justify-center rounded-full h-10 w-10 shrink-0 text-white font-bold text-sm"
           style={{ backgroundColor: lid.profiel?.avatar_color ?? "#94A3B8" }}
@@ -66,8 +66,10 @@ function LidRij({
             {ROL_LABEL[lid.role]} · lid sinds {formatteerDatum(lid.joined_at)}
           </p>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+      {(isOwner && lid.role !== "owner") || isJezelf ? (
+        <div className="flex items-center gap-2 flex-wrap mt-2.5 pt-2.5 border-t border-rand/50">
           {isOwner && lid.role !== "owner" && (
             <select
               value={lid.role}
@@ -127,7 +129,11 @@ function LidRij({
               type="button"
               disabled={isPending}
               onClick={() => {
-                if (confirm(`${naam} uit het gezin verwijderen?`)) {
+                if (
+                  confirm(
+                    `${naam} uit het gezin verwijderen? Het account verdwijnt meteen (${naam} kan niet meer inloggen), maar de al ingevulde gegevens blijven gewoon bij het huishouden staan.`
+                  )
+                ) {
                   startTransition(async () => {
                     const res = await onVerwijderen(lid.user_id);
                     if (!res.gelukt) setFout(res.foutmelding ?? "Kon niet verwijderen.");
@@ -157,7 +163,7 @@ function LidRij({
             </button>
           )}
         </div>
-      </div>
+      ) : null}
       {fout && <p className="veld-fout !mt-2 !text-xs">{fout}</p>}
     </li>
   );

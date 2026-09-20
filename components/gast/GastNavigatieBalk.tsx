@@ -17,12 +17,15 @@ export function GastNavigatieBalk() {
         <div className="flex items-center gap-1.5">
           <Link
             href="/login"
-            className="hidden sm:flex items-center gap-1.5 py-2 px-3 min-h-[40px] rounded-full text-sm font-semibold text-tekst-secundair hover:text-primair hover:bg-primair-light transition-colors duration-150"
+            aria-label="Inloggen"
+            className="flex items-center gap-1.5 py-2 px-2.5 sm:px-3 min-h-[40px] rounded-full text-sm font-semibold text-tekst-secundair hover:text-primair hover:bg-primair-light transition-colors duration-150"
           >
-            <LogIn size={16} strokeWidth={2.25} aria-hidden /> Inloggen
+            <LogIn size={16} strokeWidth={2.25} aria-hidden /> <span className="hidden sm:inline">Inloggen</span>
           </Link>
-          <Link href="/registreren" className="knop-primair !min-h-[38px] !px-4 !text-sm gap-1.5">
-            <UserPlus size={16} strokeWidth={2.25} aria-hidden /> Account maken
+          <Link href="/registreren" className="knop-primair !min-h-[38px] !px-3 sm:!px-4 !text-sm gap-1.5">
+            <UserPlus size={16} strokeWidth={2.25} aria-hidden />
+            <span className="sm:hidden">Account</span>
+            <span className="hidden sm:inline">Account maken</span>
           </Link>
         </div>
       </div>

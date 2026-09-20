@@ -4,11 +4,15 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { maakServerClient, maakServiceClient } from "@/lib/supabase/server";
 import { vereisHousehold, vereisHouseholdRol } from "@/lib/auth/household";
-import { maakGebruikersProfiel } from "@/lib/auth/gebruiker";
+import { requireSessie } from "@/lib/auth/require-role";
+import { maakGebruikersProfiel, haalGebruikersProfiel } from "@/lib/auth/gebruiker";
 import { valideerGebruikersnaamFormaat } from "@/lib/auth/gebruikersnaam";
 import { maakNepEmail } from "@/lib/auth/nep-email";
 import { haalIpHash, magDoor, registreerPoging } from "@/lib/auth/rate-limit";
 import { haalSiteUrl } from "@/lib/auth/site-url";
+import { verwijderSessieCookie } from "@/lib/auth/session";
+import { bepaalVerwijderScope } from "@/lib/auth/account-verwijderen";
+import { bouwHuisbalansExport, exportBestandsnaam } from "@/lib/export/huisbalans-export";
 import { logger } from "@/lib/logger.server";
 import type { HouseholdRol, Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
 
@@ -216,18 +220,37 @@ export async function wijzigLidRol(userId: string, rol: HouseholdRol): Promise<{
   return { gelukt: true };
 }
 
+/**
+ * De eigenaar verwijdert een gezinslid — inclusief hun account (ze
+ * kunnen daarna niet meer inloggen). Hun al ingevoerde gegevens
+ * (inkomen, kosten, ...) blijven gewoon in het huishouden staan, want
+ * die horen bij het huishouden, niet bij het account. `household_members`
+ * cascadet automatisch mee zodra het account weg is (on delete cascade
+ * op user_id) — geen aparte delete nodig.
+ */
 export async function verwijderLid(userId: string): Promise<{ gelukt: boolean; foutmelding?: string }> {
   const context = await vereisHouseholdRol("owner");
-  const supabase = maakServerClient();
 
-  const { error } = await supabase
+  if (userId === context.gebruikerId) {
+    return { gelukt: false, foutmelding: "Gebruik 'Account verwijderen' in Jouw gegevens om je eigen account te verwijderen." };
+  }
+
+  const supabase = maakServerClient();
+  const { data: lid } = await supabase
     .from("household_members")
-    .delete()
+    .select("user_id")
     .eq("household_id", context.householdId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!lid) {
+    return { gelukt: false, foutmelding: "Dit account hoort niet bij jouw huishouden." };
+  }
+
+  const serviceClient = maakServiceClient();
+  const { error } = await serviceClient.auth.admin.deleteUser(userId);
 
   if (error) {
-    logger.error({ code: "DB_001", message: "Kon lid niet verwijderen", context: { userId, error: error.message } });
+    logger.error({ code: "AUTH_001", message: "Kon lid niet verwijderen", context: { error: error.message } });
     return { gelukt: false, foutmelding: "Kon dit lid niet verwijderen." };
   }
 
@@ -313,6 +336,271 @@ export async function wisHouseholdData(): Promise<{ gelukt: boolean; foutmelding
   revalidatePath("/dashboard/[maand]", "page");
   revalidatePath("/overzicht");
   return { gelukt: true };
+}
+
+// ---------- Jouw gegevens: downloaden en account verwijderen ----------
+
+export interface DownloadResultaat {
+  gelukt: boolean;
+  bestand?: string;
+  bestandsnaam?: string;
+  foutmelding?: string;
+}
+
+/**
+ * "Download mijn gegevens": bewust de gewone sessie-client (RLS bepaalt
+ * de rijen), met expliciete kolomkeuze per tabel — nooit `household_id`/
+ * `created_by`/`updated_by`/`version` (interne kolommen) en nooit
+ * `email` voor een ANDER profiel dan het eigen (RLS filtert enkel
+ * rijen, niet kolommen — een gezinslid mag via profiles_select_huisgenoten
+ * de volledige profielrij van elk ander lid lezen, dus dat moet hier
+ * expliciet vermeden worden, niet aan RLS overgelaten).
+ */
+export async function downloadMijnGegevens(): Promise<DownloadResultaat> {
+  const context = await vereisHousehold();
+  const ipHash = haalIpHash();
+
+  if (!(await magDoor("export", ipHash, context.gebruikerId))) {
+    return { gelukt: false, foutmelding: "Te veel pogingen, probeer het later opnieuw." };
+  }
+
+  const supabase = maakServerClient();
+
+  const [
+    huishoudenRes,
+    profielRes,
+    ledenRes,
+    inkomenRes,
+    weekBedragenRes,
+    extraInkomenRes,
+    vasteKostenRes,
+    facturenRes,
+    extraUitgavenRes,
+    doelenRes,
+    doelBijdragenRes,
+    investeringenRes,
+    investeringTransactiesRes,
+    maandenRes,
+  ] = await Promise.all([
+    supabase.from("households").select("name, currency").eq("id", context.householdId).single(),
+    supabase.from("profiles").select("gebruikersnaam, email, created_at").eq("user_id", context.gebruikerId).single(),
+    supabase.from("household_members").select("user_id, role, joined_at").eq("household_id", context.householdId),
+    supabase
+      .from("inkomen")
+      .select("id, bron, label, bedrag, frequentie, maand, created_at, updated_at")
+      .eq("household_id", context.householdId),
+    supabase
+      .from("inkomen_weekbedragen")
+      .select("id, inkomen_id, week_nummer, bedrag, created_at, updated_at")
+      .eq("household_id", context.householdId),
+    supabase.from("extra_inkomen").select("id, label, bedrag, maand, created_at, updated_at").eq("household_id", context.householdId),
+    supabase
+      .from("vaste_kosten")
+      .select("id, label, bedrag, categorie, icoon, vervaldag, eind_datum, maand, betaald, created_at, updated_at")
+      .eq("household_id", context.householdId),
+    supabase
+      .from("facturen")
+      .select("id, label, bedrag, categorie, icoon, vervaldag, eind_datum, maand, betaald, created_at, updated_at")
+      .eq("household_id", context.householdId),
+    supabase
+      .from("extra_uitgaven")
+      .select("id, label, bedrag, overslaanbaar, maand, geskipt, created_at, updated_at")
+      .eq("household_id", context.householdId),
+    supabase
+      .from("doelen")
+      .select("id, naam, target_bedrag, maandelijks_bedrag, prioriteit, gepauzeerd, created_at, updated_at")
+      .eq("household_id", context.householdId),
+    supabase
+      .from("doel_bijdragen")
+      .select("id, doel_id, bedrag, datum, notitie, aftrekken_van_inkomen, created_at")
+      .eq("household_id", context.householdId),
+    supabase.from("investeringen").select("id, naam, created_at").eq("household_id", context.householdId),
+    supabase
+      .from("investering_transacties")
+      .select("id, investering_id, bedrag, datum, notitie, created_at")
+      .eq("household_id", context.householdId),
+    supabase.from("dashboard_maanden").select("maand, created_at").eq("household_id", context.householdId),
+  ]);
+
+  if (!huishoudenRes.data || !profielRes.data) {
+    logger.error({
+      code: "DB_001",
+      message: "Kon basisgegevens voor export niet ophalen",
+      context: { error: huishoudenRes.error?.message ?? profielRes.error?.message },
+    });
+    return { gelukt: false, foutmelding: "Kon je gegevens niet ophalen. Probeer opnieuw." };
+  }
+
+  // Gebruikersnamen van de rest van het gezin — enkel deze ene kolom,
+  // nooit hun e-mailadres, in een eigen, aparte query.
+  const ledenIds = (ledenRes.data ?? []).map((lid) => lid.user_id as string).filter((id) => id !== context.gebruikerId);
+  const { data: ledenProfielen } =
+    ledenIds.length > 0
+      ? await supabase.from("profiles").select("user_id, gebruikersnaam").in("user_id", ledenIds)
+      : { data: [] as { user_id: string; gebruikersnaam: string }[] };
+  const gebruikersnaamPerId = new Map((ledenProfielen ?? []).map((p) => [p.user_id, p.gebruikersnaam]));
+
+  const gezinsleden = (ledenRes.data ?? [])
+    .filter((lid) => lid.user_id !== context.gebruikerId)
+    .map((lid) => ({
+      gebruikersnaam: gebruikersnaamPerId.get(lid.user_id as string) ?? "Onbekend",
+      rol: lid.role as HouseholdRol,
+      lid_sinds: lid.joined_at as string,
+    }));
+
+  const exportData = bouwHuisbalansExport({
+    huishouden: { naam: huishoudenRes.data.name, valuta: huishoudenRes.data.currency },
+    profiel: {
+      gebruikersnaam: profielRes.data.gebruikersnaam,
+      email: profielRes.data.email,
+      lid_sinds: profielRes.data.created_at,
+    },
+    gezinsleden,
+    inkomen: inkomenRes.data ?? [],
+    inkomen_weekbedragen: weekBedragenRes.data ?? [],
+    extra_inkomen: extraInkomenRes.data ?? [],
+    vaste_kosten: vasteKostenRes.data ?? [],
+    facturen: facturenRes.data ?? [],
+    extra_uitgaven: extraUitgavenRes.data ?? [],
+    doelen: doelenRes.data ?? [],
+    doel_bijdragen: doelBijdragenRes.data ?? [],
+    investeringen: investeringenRes.data ?? [],
+    investering_transacties: investeringTransactiesRes.data ?? [],
+    dashboard_maanden: maandenRes.data ?? [],
+  });
+
+  await registreerPoging("export", ipHash, context.gebruikerId, true);
+
+  return { gelukt: true, bestand: JSON.stringify(exportData, null, 2), bestandsnaam: exportBestandsnaam() };
+}
+
+export interface VerwijderAccountResultaat {
+  gelukt: boolean;
+  foutmelding?: string;
+}
+
+/**
+ * Verwijdert het eigen account (service-client — enkel de admin-API kan
+ * een auth-gebruiker verwijderen), registreert de poging voor de
+ * rate-limit, en bij succes: uitloggen + doorsturen. Bij een fout
+ * blijft alles zoals het was (geen sessie/cookie aangeraakt), dus een
+ * herhaalde poging is altijd veilig.
+ */
+async function verwijderEigenAccount(
+  userId: string,
+  serviceClient: ReturnType<typeof maakServiceClient>,
+  ipHash: string | null
+): Promise<VerwijderAccountResultaat> {
+  const { error } = await serviceClient.auth.admin.deleteUser(userId);
+  await registreerPoging("verwijderen", ipHash, userId, !error);
+
+  if (error) {
+    // Nooit gebruikersnaam/e-mailadres in de log — enkel de technische foutmelding.
+    logger.error({ code: "AUTH_001", message: "Kon account niet volledig verwijderen", context: { error: error.message } });
+    return { gelukt: false, foutmelding: "Kon je account niet volledig verwijderen. Probeer opnieuw." };
+  }
+
+  const supabase = maakServerClient();
+  await supabase.auth.signOut();
+  verwijderSessieCookie();
+  redirect("/login?account_verwijderd=1");
+}
+
+/**
+ * "Account verwijderen" — voor zowel de eigenaar als een gezinslid.
+ * Wachtwoord wordt eerst opnieuw geverifieerd (signInWithPassword),
+ * daarna de rate-limit gecontroleerd.
+ *
+ * Gebruikt bewust requireSessie() (enkel een geldige sessie, geen
+ * huishouden vereist) i.p.v. vereisHousehold(): een gebruiker zonder
+ * household_members-rij moet dit ook kunnen — dat is precies het
+ * "wees"-herstelpad voor wanneer een eerdere poging strandde ná de
+ * RPC (huishouden al weg) maar vóór de laatste stap (het eigen
+ * account verwijderen).
+ *
+ * Eigenaar-volgorde (enkel als de gebruiker de ENIGE eigenaar is —
+ * zie bepaalVerwijderScope): eerst alle gezinsleden (deleteUser), dán
+ * de RPC (verwijder_household, met de sessie-client: private.is_owner
+ * heeft een echte auth.uid() nodig), dán de eigenaar zelf. Zo raakt de
+ * database nooit iets aan zolang er nog een gezinslid-account
+ * over is dat niet verwijderd kon worden.
+ */
+export async function verwijderMijnAccount(wachtwoord: string): Promise<VerwijderAccountResultaat> {
+  const sessie = await requireSessie();
+
+  const profiel = await haalGebruikersProfiel(sessie.gebruikerId);
+  if (!profiel) {
+    return { gelukt: false, foutmelding: "Kon je account niet vinden. Probeer opnieuw in te loggen." };
+  }
+
+  const supabase = maakServerClient();
+  const { error: wachtwoordFout } = await supabase.auth.signInWithPassword({
+    email: profiel.email,
+    password: wachtwoord,
+  });
+  if (wachtwoordFout) {
+    return { gelukt: false, foutmelding: "Wachtwoord klopt niet." };
+  }
+
+  const ipHash = haalIpHash();
+  if (!(await magDoor("verwijderen", ipHash, sessie.gebruikerId))) {
+    return { gelukt: false, foutmelding: "Te veel pogingen, probeer het later opnieuw." };
+  }
+
+  const serviceClient = maakServiceClient();
+
+  const { data: lidRij } = await supabase
+    .from("household_members")
+    .select("household_id, role")
+    .eq("user_id", sessie.gebruikerId)
+    .maybeSingle();
+
+  if (!lidRij) {
+    // "Wees"-pad: geen huishouden (meer) — enkel het account zelf nog verwijderen.
+    return verwijderEigenAccount(sessie.gebruikerId, serviceClient, ipHash);
+  }
+
+  if (lidRij.role !== "owner") {
+    // Gewoon gezinslid: enkel het eigen account, de huishouddata blijft.
+    return verwijderEigenAccount(sessie.gebruikerId, serviceClient, ipHash);
+  }
+
+  const { count: aantalEigenaren } = await supabase
+    .from("household_members")
+    .select("user_id", { count: "exact", head: true })
+    .eq("household_id", lidRij.household_id)
+    .eq("role", "owner");
+
+  const scope = bepaalVerwijderScope(lidRij.role as HouseholdRol, aantalEigenaren ?? 1);
+
+  if (scope === "zelf") {
+    return verwijderEigenAccount(sessie.gebruikerId, serviceClient, ipHash);
+  }
+
+  const { data: alleLeden } = await supabase.from("household_members").select("user_id").eq("household_id", lidRij.household_id);
+  const gezinsledenIds = (alleLeden ?? []).map((lid) => lid.user_id as string).filter((id) => id !== sessie.gebruikerId);
+
+  for (const lidId of gezinsledenIds) {
+    const { error } = await serviceClient.auth.admin.deleteUser(lidId);
+    if (error) {
+      logger.error({
+        code: "AUTH_001",
+        message: "Kon gezinslid-account niet verwijderen tijdens het verwijderen van het huishouden",
+        context: { error: error.message },
+      });
+      await registreerPoging("verwijderen", ipHash, sessie.gebruikerId, false);
+      return { gelukt: false, foutmelding: "Kon niet alles verwijderen. Probeer opnieuw." };
+    }
+  }
+
+  const { error: rpcFout } = await supabase.rpc("verwijder_household", { p_household_id: lidRij.household_id });
+  if (rpcFout) {
+    logger.error({ code: "DB_001", message: "verwijder_household mislukte", context: { error: rpcFout.message } });
+    await registreerPoging("verwijderen", ipHash, sessie.gebruikerId, false);
+    return { gelukt: false, foutmelding: "Kon het huishouden niet volledig verwijderen. Probeer opnieuw." };
+  }
+
+  return verwijderEigenAccount(sessie.gebruikerId, serviceClient, ipHash);
 }
 
 // ---------- Gast-data importeren ----------

@@ -14,7 +14,7 @@ const RESET_VENSTER_MINUTEN = 60;
 const RESET_MAX_POGINGEN_IDENTIFICATOR = 3;
 const RESET_MAX_POGINGEN_IP = 10;
 
-export type PogingSoort = "accept" | "aanmaken" | "login" | "reset";
+export type PogingSoort = "accept" | "aanmaken" | "login" | "reset" | "verwijderen" | "export";
 
 /** Gehashte client-IP (nooit het echte IP bewaren) — best-effort, `null` als de header ontbreekt. */
 export function haalIpHash(): string | null {

@@ -15,7 +15,8 @@ export function GastBanner() {
       </span>
       <p className="text-sm text-tekst-primair flex-1 min-w-[200px]">
         <span className="font-bold">Je probeert dit uit zonder account.</span> Alles wat je invult wordt enkel op dit
-        toestel bewaard, in deze browser.
+        toestel bewaard, in deze browser — er wordt niets naar een server verstuurd. Wissen kan via &ldquo;Alle
+        data wissen&rdquo; hieronder, of door de browsergegevens van deze site te wissen.
       </p>
       <Link href="/registreren" className="knop-primair !min-h-[38px] !px-4 !text-sm shrink-0">
         Account maken &amp; bewaren

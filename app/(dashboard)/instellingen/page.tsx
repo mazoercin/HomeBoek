@@ -7,6 +7,7 @@ import { HouseholdNaamKaart } from "@/components/instellingen/HouseholdNaamKaart
 import { GebruikersToevoegenKaart } from "@/components/instellingen/GebruikersToevoegenKaart";
 import { HerstelEmailKaart } from "@/components/instellingen/HerstelEmailKaart";
 import { LedenBeheer } from "@/components/instellingen/LedenBeheer";
+import { JouwGegevensKaart } from "@/components/instellingen/JouwGegevensKaart";
 import { wisLogboek } from "./actions";
 import {
   zetHouseholdInstellingen,
@@ -17,7 +18,10 @@ import {
   verwijderLid,
   draagEigenaarschapOver,
   verlaatHousehold,
+  downloadMijnGegevens,
+  verwijderMijnAccount,
 } from "@/app/gezin/actions";
+import { bepaalVerwijderScope } from "@/lib/auth/account-verwijderen";
 import { uitloggen } from "../logout-action";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +37,11 @@ export default async function InstellingenPagina() {
 
   const aantalExtraLeden = overzicht.leden.filter((lid) => lid.role !== "owner").length;
   const eigenEmail = overzicht.leden.find((lid) => lid.user_id === context.gebruikerId)?.profiel?.email ?? "";
+  const aantalEigenaren = overzicht.leden.filter((lid) => lid.role === "owner").length;
+  const verwijderScope = bepaalVerwijderScope(context.rol, aantalEigenaren);
+  const gezinsledenNamen = overzicht.leden
+    .filter((lid) => lid.user_id !== context.gebruikerId)
+    .map((lid) => lid.profiel?.gebruikersnaam ?? lid.display_name ?? "Onbekend lid");
 
   return (
     <div className="space-y-6">
@@ -65,6 +74,13 @@ export default async function InstellingenPagina() {
         onEigenaarschapOverdragen={draagEigenaarschapOver}
         onVerlaten={verlaatHousehold}
         onWachtwoordResetten={resetLidWachtwoord}
+      />
+
+      <JouwGegevensKaart
+        scope={verwijderScope}
+        gezinsledenNamen={gezinsledenNamen}
+        onDownloaden={downloadMijnGegevens}
+        onVerwijderen={verwijderMijnAccount}
       />
 
       {isOwner && <LogViewer regels={regels} onWissen={wisLogboek} />}
