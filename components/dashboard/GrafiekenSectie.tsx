@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { PieChart as PieChartIcon, Plus } from "lucide-react";
-import type { Categorie, InkomenBron, Inkomen, InkomenWeekBedrag, VasteKost, ExtraUitgave } from "@/types/database";
+import type { Betaalmethode, Categorie, InkomenBron, Inkomen, InkomenWeekBedrag, VasteKost, ExtraUitgave } from "@/types/database";
 import { CATEGORIE_INFO } from "@/types/database";
 import { berekenInkomenMaandbedrag } from "@/lib/calculations/inkomen";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
@@ -182,7 +182,7 @@ interface Props {
     vervaldag: number | null;
     eind_datum: string | null;
   }) => ActieResultaat;
-  onExtraUitgaveToevoegen: (data: { label: string; bedrag: number; overslaanbaar: boolean }) => ActieResultaat;
+  onExtraUitgaveToevoegen: (data: { label: string; bedrag: number; overslaanbaar: boolean; betaalmethode: Betaalmethode }) => ActieResultaat;
 }
 
 /**
@@ -275,6 +275,7 @@ export function GrafiekenSectie({
                   label: String(fd.get("label")),
                   bedrag: Number(fd.get("bedrag")),
                   overslaanbaar: true,
+                  betaalmethode: "bankkaart",
                 })
               }
             />

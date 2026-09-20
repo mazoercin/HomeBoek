@@ -29,6 +29,7 @@ const BRONNEN: { waarde: InkomenBron; label: string }[] = [
   { waarde: "zelf", label: "Zelf" },
   { waarde: "partner", label: "Partner" },
   { waarde: "ander", label: "Ander" },
+  { waarde: "maaltijdcheques", label: "Maaltijdcheques" },
 ];
 
 const FREQUENTIES: { waarde: InkomenFrequentie; label: string }[] = [
@@ -189,7 +190,9 @@ export function InkomenSectie({ items, weekBedragen, onToevoegen, onVerwijderen,
       <h2 className="text-lg font-bold tracking-tight mb-1">Inkomen</h2>
       <p className="text-xs text-tekst-secundair mb-4">
         Kies per post hoe vaak het binnenkomt — we rekenen automatisch om naar een maandbedrag. Bij &ldquo;wekelijks&rdquo;
-        kan je ook elke week apart invullen als het bedrag varieert.
+        kan je ook elke week apart invullen als het bedrag varieert. Bron &ldquo;Maaltijdcheques&rdquo; telt apart —
+        dat geld komt niet op je rekening, dus het telt niet mee bij &ldquo;Totaal inkomen&rdquo; hierboven (zie het
+        aparte maaltijdcheques-blok als je die gebruikt).
       </p>
 
       {items.length === 0 && !formOpen && (

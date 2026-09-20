@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, Plus, SlidersHorizontal } from "lucide-react";
-import type { ExtraUitgave } from "@/types/database";
+import { Trash2, Plus, SlidersHorizontal, UtensilsCrossed } from "lucide-react";
+import type { Betaalmethode, ExtraUitgave } from "@/types/database";
 import { StapTip } from "@/components/ui/StapTip";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 import { Switch } from "@/components/ui/Switch";
@@ -15,6 +15,7 @@ interface Props {
     label: string;
     bedrag: number;
     overslaanbaar: boolean;
+    betaalmethode: Betaalmethode;
   }) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onVerwijderen: (id: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onZetGeskipt: (id: string, geskipt: boolean) => Promise<{ gelukt: boolean; foutmelding?: string }>;
@@ -33,6 +34,7 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
     const label = String(formData.get("label") ?? "").trim();
     const bedrag = Number(formData.get("bedrag"));
     const overslaanbaar = formData.get("overslaanbaar") === "on";
+    const betaalmethode = String(formData.get("betaalmethode") ?? "bankkaart") as Betaalmethode;
 
     if (!label) {
       setFout("Vul een label in.");
@@ -44,7 +46,7 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
     }
 
     startTransition(async () => {
-      const resultaat = await onToevoegen({ label, bedrag, overslaanbaar });
+      const resultaat = await onToevoegen({ label, bedrag, overslaanbaar, betaalmethode });
       if (resultaat.gelukt) setFormOpen(false);
       else setFout(resultaat.foutmelding ?? "Kon niet opslaan.");
     });
@@ -80,6 +82,11 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-tekst-primair truncate leading-tight">{item.label}</p>
                 <div className="flex gap-1.5 flex-wrap mt-1">
+                  {item.betaalmethode === "maaltijdcheque" && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-succes bg-succes-bg rounded-full px-2 py-0.5">
+                      <UtensilsCrossed size={11} strokeWidth={2.5} /> Maaltijdcheque
+                    </span>
+                  )}
                   {item.overslaanbaar && (
                     <span className="text-[11px] font-bold text-secundair-dark bg-secundair-light rounded-full px-2 py-0.5">
                       Overslaanbaar
@@ -139,12 +146,34 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
       <Uitklapbaar open={formOpen}>
         <form action={submit} className="space-y-3 border-t border-rand pt-3">
           <div>
-            <label className="veld-label">Label</label>
-            <input name="label" className="veld-input" required />
+            <label className="veld-label" htmlFor="extra-uitgave-label">
+              Label
+            </label>
+            <input id="extra-uitgave-label" name="label" className="veld-input" required />
           </div>
           <div>
-            <label className="veld-label">Bedrag (€)</label>
-            <input name="bedrag" type="number" inputMode="decimal" step="0.01" min="0.01" className="veld-input" required />
+            <label className="veld-label" htmlFor="extra-uitgave-bedrag">
+              Bedrag (€)
+            </label>
+            <input
+              id="extra-uitgave-bedrag"
+              name="bedrag"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0.01"
+              className="veld-input"
+              required
+            />
+          </div>
+          <div>
+            <label className="veld-label" htmlFor="extra-uitgave-betaalmethode">
+              Betaald met
+            </label>
+            <select id="extra-uitgave-betaalmethode" name="betaalmethode" className="veld-input" defaultValue="bankkaart">
+              <option value="bankkaart">Bankkaart</option>
+              <option value="maaltijdcheque">Maaltijdcheque</option>
+            </select>
           </div>
           <label className="flex items-center gap-2 min-h-[44px]">
             <input name="overslaanbaar" type="checkbox" defaultChecked className="h-5 w-5" />

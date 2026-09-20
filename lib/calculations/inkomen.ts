@@ -70,11 +70,16 @@ export function berekenInkomenMaandbedrag(post: Inkomen, weekBedragen: InkomenWe
  * item overgeslagen (niet meegeteld), een CALC_001-logregel
  * geschreven, en de berekening gaat door met de rest — één slechte
  * rij mag nooit het hele dashboard breken.
+ *
+ * Inkomen met bron 'maaltijdcheques' telt hier NIET mee: dat geld komt
+ * nooit op de bankrekening terecht, het voedt enkel het aparte
+ * maaltijdcheques-budget (zie lib/calculations/maaltijdcheques.ts).
  */
 export function berekenTotaalInkomen(input: InkomenInput): number {
   let totaal = 0;
 
   for (const post of input.inkomen) {
+    if (post.bron === "maaltijdcheques") continue;
     try {
       totaal += berekenInkomenMaandbedrag(post, input.weekBedragen);
     } catch (error) {

@@ -40,7 +40,13 @@ interface HuishoudenRij {
  */
 export type InkomenFrequentie = "wekelijks" | "maandelijks" | "3-maandelijks" | "6-maandelijks" | "jaarlijks";
 
-export type InkomenBron = "zelf" | "partner" | "ander";
+/**
+ * "maaltijdcheques" is geen gewoon inkomen: dat bedrag komt nooit op de
+ * bankrekening terecht en telt dus niet mee in het gewone totaalinkomen
+ * (zie berekenTotaalInkomen) — het voedt enkel het aparte
+ * maaltijdcheques-budget (zie lib/calculations/maaltijdcheques.ts).
+ */
+export type InkomenBron = "zelf" | "partner" | "ander" | "maaltijdcheques";
 
 export interface Inkomen extends HuishoudenRij {
   id: string;
@@ -115,6 +121,15 @@ export interface Factuur extends HuishoudenRij {
   updated_at: string;
 }
 
+/**
+ * Waarmee een extra uitgave betaald werd. "Visa" (kredietkaart) is hier
+ * bewust GEEN waarde: zo'n uitgave wordt meteen als Factuur aangemaakt
+ * (categorie "krediet") in plaats van als extra_uitgaven-rij, want dat
+ * bedrag moet nog terugbetaald worden aan de kaart — dat hoort bij
+ * "openstaand", niet bij "al uitgegeven".
+ */
+export type Betaalmethode = "bankkaart" | "maaltijdcheque";
+
 export interface ExtraUitgave extends HuishoudenRij {
   id: string;
   label: string;
@@ -122,6 +137,13 @@ export interface ExtraUitgave extends HuishoudenRij {
   overslaanbaar: boolean;
   maand: string; // YYYY-MM
   geskipt: boolean;
+  /**
+   * "maaltijdcheque" trekt af van het aparte maaltijdcheques-budget i.p.v.
+   * het gewone geld-saldo (zie lib/calculations/uitgaven.ts en
+   * lib/calculations/maaltijdcheques.ts) — dat geld kwam nooit van de
+   * bankrekening, dus het mag het "wat overblijft"-bedrag niet verlagen.
+   */
+  betaalmethode: Betaalmethode;
   created_at: string;
   updated_at: string;
 }

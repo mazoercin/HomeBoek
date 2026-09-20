@@ -55,9 +55,15 @@ export function ExtraKostWidget({ rol, onVoegToe, onMaakOngedaan }: Props) {
       return { gelukt: false, foutmelding: resultaat.foutmelding };
     }
 
+    // Visa komt terecht als een nieuwe Factuur-rij, met een eigen,
+    // server-gegenereerd id — niet dit client-uuid. "Ongedaan maken" kan
+    // daardoor niet op dezelfde manier werken als bij bankkaart/
+    // maaltijdcheque (extra_uitgaven, waar dit uuid wél het echte id
+    // wordt): verwijderen kan dan gewoon met de knop bij Facturen.
+    const naarFacturen = invoer.betaalmethode === "visa";
     setToast({
-      bericht: `${formatteerEuro(invoer.bedrag)} toegevoegd`,
-      ongedaanMakenId: id,
+      bericht: naarFacturen ? `${formatteerEuro(invoer.bedrag)} toegevoegd aan Facturen` : `${formatteerEuro(invoer.bedrag)} toegevoegd`,
+      ongedaanMakenId: naarFacturen ? null : id,
     });
     return { gelukt: true };
   }

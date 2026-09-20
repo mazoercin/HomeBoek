@@ -1,4 +1,4 @@
-import type { Categorie, InkomenBron, InkomenFrequentie } from "./database";
+import type { Betaalmethode, Categorie, InkomenBron, InkomenFrequentie } from "./database";
 
 export interface KostInvoer {
   label: string;
@@ -35,7 +35,7 @@ export interface DashboardActies {
    * Zonder `id` genereert de opslaglaag er zelf één, zoals voorheen.
    */
   voegExtraUitgaveToe: (
-    data: { id?: string; label: string; bedrag: number; overslaanbaar: boolean },
+    data: { id?: string; label: string; bedrag: number; overslaanbaar: boolean; betaalmethode: Betaalmethode },
     maand: string
   ) => Resultaat;
   verwijderExtraUitgave: (id: string) => Resultaat;

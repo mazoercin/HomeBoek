@@ -104,4 +104,11 @@ describe("berekenTotaalInkomen met weekBedragen", () => {
     const totaal = berekenTotaalInkomen({ inkomen: [loon], extraInkomen: [], weekBedragen: [], maand: "2026-09" });
     expect(totaal).toBe(360);
   });
+
+  it("telt inkomen met bron 'maaltijdcheques' NIET mee — dat geld komt niet op de rekening", () => {
+    const loon = maakInkomen({ id: "loon", label: "Loon", bron: "zelf", frequentie: "maandelijks", bedrag: 2400 });
+    const cheques = maakInkomen({ id: "cheques", label: "Maaltijdcheques", bron: "maaltijdcheques", frequentie: "maandelijks", bedrag: 150 });
+    const totaal = berekenTotaalInkomen({ inkomen: [loon, cheques], extraInkomen: [], weekBedragen: [], maand: "2026-09" });
+    expect(totaal).toBe(2400);
+  });
 });

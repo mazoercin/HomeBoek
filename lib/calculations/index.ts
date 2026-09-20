@@ -7,3 +7,4 @@ export * from "./watAls";
 export * from "./doelen";
 export * from "./voorstellen";
 export * from "./geld";
+export * from "./maaltijdcheques";

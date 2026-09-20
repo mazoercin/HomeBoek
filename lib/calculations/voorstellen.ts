@@ -24,8 +24,11 @@ export function genereerVoorstellenBijTekort(input: VoorstellenInput): Voorstel[
 
   const voorstellen: Voorstel[] = [];
 
+  // Met maaltijdcheques betaalde uitgaven pauzeren zou hier niets
+  // oplossen: dat geld werd nooit van het geld-saldo afgetrokken (zie
+  // berekenOpenstaandBedrag), dus het tekort in "geld" blijft gelijk.
   const pauzeerbareUitgaven = input.extraUitgaven
-    .filter((u) => u.overslaanbaar && !u.geskipt)
+    .filter((u) => u.overslaanbaar && !u.geskipt && u.betaalmethode !== "maaltijdcheque")
     .sort((a, b) => b.bedrag - a.bedrag);
 
   for (const uitgave of pauzeerbareUitgaven) {

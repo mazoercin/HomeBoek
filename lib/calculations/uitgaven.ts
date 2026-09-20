@@ -7,6 +7,11 @@ import type { UitgavenInput } from "./types";
  * betaald-status. De caller haalt de items al gefilterd op maand op
  * (elke rij hoort bij precies één maand), dus hier wordt niet nog
  * eens op maand gefilterd.
+ *
+ * Een extra uitgave betaald met maaltijdcheques telt hier NIET mee:
+ * dat geld kwam nooit van de bankrekening, dus het mag "wat overblijft"
+ * niet verlagen — dat verbruik hoort bij het aparte maaltijdcheques-
+ * budget (zie lib/calculations/maaltijdcheques.ts).
  */
 export function berekenOpenstaandBedrag(input: UitgavenInput): number {
   let totaal = 0;
@@ -46,7 +51,7 @@ export function berekenOpenstaandBedrag(input: UitgavenInput): number {
       if (!Number.isFinite(uitgave.bedrag) || uitgave.bedrag < 0) {
         throw new Error(`Ongeldig bedrag voor extra uitgave: ${uitgave.bedrag}`);
       }
-      if (!uitgave.geskipt) {
+      if (!uitgave.geskipt && uitgave.betaalmethode !== "maaltijdcheque") {
         totaal += uitgave.bedrag;
       }
     } catch (error) {

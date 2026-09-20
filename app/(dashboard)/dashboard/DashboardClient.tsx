@@ -12,6 +12,9 @@ import {
   berekenWatOverblijft,
   berekenBijdragenAftrekVoorMaand,
   genereerVoorstellenBijTekort,
+  berekenMaaltijdchequesOntvangen,
+  berekenMaaltijdchequesBesteed,
+  berekenMaaltijdchequesOver,
 } from "@/lib/calculations";
 import { MaandKop } from "@/components/dashboard/MaandKop";
 import { SamenvattingKaarten } from "@/components/dashboard/SamenvattingKaarten";
@@ -27,7 +30,8 @@ import { GevarenZone } from "@/components/dashboard/GevarenZone";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 import { SleepbaarBlok } from "@/components/dashboard/SleepbaarBlok";
 import { ExtraKostWidget } from "@/components/extra-kost/ExtraKostWidget";
-import type { ExtraUitgave, HouseholdRol } from "@/types/database";
+import type { ExtraKostBetaalmethode } from "@/components/extra-kost/ExtraKostSheet";
+import { CATEGORIE_INFO, type ExtraUitgave, type HouseholdRol } from "@/types/database";
 import type { DashboardActies, RegistreerMaandActie } from "@/types/dashboard-acties";
 
 /**
@@ -162,6 +166,17 @@ export function DashboardClient({
   );
   const betaaldHuidigeMaand = kostenMetBetaalStatus - nogTeBetalenHuidigeMaand;
 
+  const maaltijdchequesOntvangen = useMemo(
+    () => berekenMaaltijdchequesOntvangen({ inkomen: data.inkomen, weekBedragen: data.inkomenWeekBedragen }),
+    [data]
+  );
+  const maaltijdchequesBesteed = useMemo(() => berekenMaaltijdchequesBesteed(extraUitgaven), [extraUitgaven]);
+  const maaltijdcheques = {
+    ontvangen: maaltijdchequesOntvangen,
+    besteed: maaltijdchequesBesteed,
+    over: berekenMaaltijdchequesOver(maaltijdchequesOntvangen, maaltijdchequesBesteed),
+  };
+
   const voorstellen = useMemo(() => {
     if (watOverblijftHuidigeMaand >= 0) return [];
     return genereerVoorstellenBijTekort({
@@ -182,7 +197,29 @@ export function DashboardClient({
     id: string;
     label: string;
     bedrag: number;
+    betaalmethode: ExtraKostBetaalmethode;
   }): Promise<{ gelukt: boolean; foutmelding?: string }> {
+    // Visa is geen echte betaalmethode van extra_uitgaven: dat bedrag
+    // moet nog terugbetaald worden aan de kaart, dus dit wordt meteen
+    // een Factuur (categorie "krediet") i.p.v. een extra_uitgaven-rij.
+    // Geen optimistische lokale weergave hier (die bestaat enkel voor
+    // `extraUitgaven`) — de Facturen-kaart leest rechtstreeks van `data`,
+    // wat na deze server-aanroep vanzelf ververst.
+    if (invoer.betaalmethode === "visa") {
+      const resultaat = await acties.voegFactuurToe(
+        {
+          label: invoer.label,
+          bedrag: invoer.bedrag,
+          categorie: "krediet",
+          icoon: CATEGORIE_INFO.krediet.icoon,
+          vervaldag: null,
+          eind_datum: null,
+        },
+        huidigeMaand
+      );
+      return resultaat;
+    }
+
     const optimistischItem: ExtraUitgave = {
       id: invoer.id,
       label: invoer.label,
@@ -190,6 +227,7 @@ export function DashboardClient({
       overslaanbaar: false,
       maand: huidigeMaand,
       geskipt: false,
+      betaalmethode: invoer.betaalmethode,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       household_id: "",
@@ -201,7 +239,7 @@ export function DashboardClient({
     setNieuwItemId(invoer.id);
 
     const resultaat = await acties.voegExtraUitgaveToe(
-      { id: invoer.id, label: invoer.label, bedrag: invoer.bedrag, overslaanbaar: false },
+      { id: invoer.id, label: invoer.label, bedrag: invoer.bedrag, overslaanbaar: false, betaalmethode: invoer.betaalmethode },
       huidigeMaand
     );
 
@@ -278,6 +316,7 @@ export function DashboardClient({
             watOverblijft={watOverblijftHuidigeMaand}
             betaaldHuidigeMaand={betaaldHuidigeMaand}
             nogTeBetalenHuidigeMaand={nogTeBetalenHuidigeMaand}
+            maaltijdcheques={maaltijdcheques}
           />
         </ScrollReveal>
       ),
@@ -373,7 +412,11 @@ export function DashboardClient({
       element: (
         <ScrollReveal>
           <WatAlsKader
-            overslaanbareUitgaven={extraUitgaven.filter((u) => u.overslaanbaar)}
+            // Maaltijdcheque-uitgaven pauzeren simuleren zou hier een
+            // niet-bestaande besparing tonen: dat bedrag telt toch al
+            // niet mee in watOverblijft (regulier geld) — zie
+            // berekenOpenstaandBedrag.
+            overslaanbareUitgaven={extraUitgaven.filter((u) => u.overslaanbaar && u.betaalmethode !== "maaltijdcheque")}
             huidigWatOverblijft={watOverblijftHuidigeMaand}
             onToepassen={acties.pasWatAlsToe}
           />

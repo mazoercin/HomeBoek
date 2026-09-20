@@ -13,6 +13,7 @@ function maakExtraUitgave(overrides: Partial<ExtraUitgave> = {}): ExtraUitgave {
     overslaanbaar: false,
     maand: "2026-09",
     geskipt: false,
+    betaalmethode: "bankkaart",
     created_at: "2026-09-01T00:00:00Z",
     updated_at: "2026-09-01T00:00:00Z",
     ...METADATA,
@@ -73,6 +74,27 @@ describe("berekenOpenstaandBedrag — extra uitgaven meetellen", () => {
       extraUitgaven: [maakExtraUitgave({ bedrag: 8.5, overslaanbaar: true, geskipt: true })],
     });
     expect(totaal).toBe(0);
+  });
+
+  it("telt een met maaltijdcheques betaalde uitgave NIET mee (dat geld kwam nooit van de bankrekening)", () => {
+    const totaal = berekenOpenstaandBedrag({
+      vasteKosten: [],
+      facturen: [],
+      extraUitgaven: [maakExtraUitgave({ bedrag: 12, betaalmethode: "maaltijdcheque" })],
+    });
+    expect(totaal).toBe(0);
+  });
+
+  it("mengt bankkaart- en maaltijdcheque-uitgaven correct: enkel bankkaart telt mee", () => {
+    const totaal = berekenOpenstaandBedrag({
+      vasteKosten: [],
+      facturen: [],
+      extraUitgaven: [
+        maakExtraUitgave({ id: "bankkaart", bedrag: 20, betaalmethode: "bankkaart" }),
+        maakExtraUitgave({ id: "cheque", bedrag: 15, betaalmethode: "maaltijdcheque" }),
+      ],
+    });
+    expect(totaal).toBe(20);
   });
 });
 

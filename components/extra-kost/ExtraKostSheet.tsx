@@ -4,10 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { parseBedragNaarCents, centsNaarEuro } from "@/lib/calculations/geld";
 
+/**
+ * "visa" is geen echte Betaalmethode (zie types/database.ts) — het is
+ * een routeringssignaal: de aanroeper (DashboardClient) maakt daar een
+ * Factuur van i.p.v. een extra_uitgaven-rij, want dat bedrag moet nog
+ * terugbetaald worden aan de kaart.
+ */
+export type ExtraKostBetaalmethode = "bankkaart" | "visa" | "maaltijdcheque";
+
 export interface ExtraKostInvoer {
   bedrag: number;
   label: string;
+  betaalmethode: ExtraKostBetaalmethode;
 }
+
+const BETAALMETHODEN: { waarde: ExtraKostBetaalmethode; label: string }[] = [
+  { waarde: "bankkaart", label: "Bankkaart" },
+  { waarde: "visa", label: "Visa" },
+  { waarde: "maaltijdcheque", label: "Maaltijdcheque" },
+];
 
 interface Props {
   open: boolean;
@@ -31,6 +46,7 @@ const FOCUSBARE_ELEMENTEN = 'button, [href], input, select, textarea, [tabindex]
 export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
   const [bedragTekst, setBedragTekst] = useState("");
   const [omschrijving, setOmschrijving] = useState("");
+  const [betaalmethode, setBetaalmethode] = useState<ExtraKostBetaalmethode>("bankkaart");
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
@@ -93,7 +109,7 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
     }
 
     setIsPending(true);
-    const resultaat = await onVoegToe({ bedrag: centsNaarEuro(cents), label: schoneOmschrijving });
+    const resultaat = await onVoegToe({ bedrag: centsNaarEuro(cents), label: schoneOmschrijving, betaalmethode });
     setIsPending(false);
 
     if (!resultaat.gelukt) {
@@ -103,6 +119,7 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
 
     setBedragTekst("");
     setOmschrijving("");
+    setBetaalmethode("bankkaart");
     onSluiten();
   }
 
@@ -173,6 +190,38 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
               value={omschrijving}
               onChange={(e) => setOmschrijving(e.target.value)}
             />
+          </div>
+
+          <div>
+            <label className="veld-label" id="extra-kost-betaalmethode-label">
+              Betaald met
+            </label>
+            <div className="flex gap-1.5" role="radiogroup" aria-labelledby="extra-kost-betaalmethode-label">
+              {BETAALMETHODEN.map((m) => (
+                <button
+                  key={m.waarde}
+                  type="button"
+                  role="radio"
+                  aria-checked={betaalmethode === m.waarde}
+                  onClick={() => setBetaalmethode(m.waarde)}
+                  className={`flex-1 min-h-[40px] rounded-xl text-xs font-bold border transition ${
+                    betaalmethode === m.waarde
+                      ? "bg-primair-dark text-white border-primair-dark"
+                      : "bg-kaart-verhoogd text-tekst-secundair border-rand hover:border-primair/40"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {betaalmethode === "visa" && (
+              <p className="text-xs text-tekst-secundair mt-1.5">
+                Komt bij Facturen te staan — dat bedrag moet je nog terugbetalen aan je kaart.
+              </p>
+            )}
+            {betaalmethode === "maaltijdcheque" && (
+              <p className="text-xs text-tekst-secundair mt-1.5">Gaat af van je maaltijdcheques-budget, niet van je geld.</p>
+            )}
           </div>
 
           {fout && (
