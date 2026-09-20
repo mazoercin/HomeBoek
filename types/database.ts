@@ -16,17 +16,6 @@ export interface Profiel {
 /** Rol binnen één huishouden — vervangt de vroegere globale admin/lid-rol. */
 export type HouseholdRol = "owner" | "editor" | "viewer";
 
-export interface Household {
-  id: string;
-  name: string;
-  currency: string;
-  require_approval: boolean;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
 export interface HouseholdLid {
   household_id: string;
   user_id: string;

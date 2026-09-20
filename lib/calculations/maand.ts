@@ -39,15 +39,6 @@ export function voegMaandenToe(maandSleutelWaarde: string, aantal: number): stri
   return maandSleutel(datum);
 }
 
-/** true als `sleutel` chronologisch na `grens` valt (string-vergelijking werkt dankzij het YYYY-MM-formaat). */
-export function isNaMaand(sleutel: string, grens: string): boolean {
-  return sleutel > grens;
-}
-
-export function isVoorOfGelijkAanMaand(sleutel: string, grens: string): boolean {
-  return sleutel <= grens;
-}
-
 /**
  * "Vandaag" als "YYYY-MM-DD", altijd in de Europe/Brussels-tijdzone —
  * ongeacht in welke tijdzone de server of het toestel effectief draait

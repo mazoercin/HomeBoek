@@ -7,7 +7,3 @@
 export function berekenWatOverblijft(totaalInkomen: number, openstaandBedrag: number): number {
   return totaalInkomen - openstaandBedrag;
 }
-
-export function isPositief(watOverblijft: number): boolean {
-  return watOverblijft >= 0;
-}

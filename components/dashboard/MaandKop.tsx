@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { ChevronLeft, ChevronRight, CalendarPlus, CalendarDays, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight, CalendarPlus, CalendarDays, RotateCcw, RefreshCw } from "lucide-react";
 import { formatteerMaandNaam, maandSleutel } from "@/lib/calculations/maand";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 import { Switch } from "@/components/ui/Switch";
@@ -37,11 +38,13 @@ export function MaandKop({
   basisPad = "/dashboard",
   toonOverzicht = true,
 }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [nieuweMaand, setNieuweMaand] = useState(huidigeMaand);
   const [kopieren, setKopieren] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [verversPending, startVervers] = useTransition();
   const [vandaag, setVandaag] = useState<string | null>(null);
 
   // Pas na mount bepalen (i.p.v. tijdens SSR) om een hydration-mismatch
@@ -103,6 +106,18 @@ export function MaandKop({
           >
             <ChevronRight size={18} strokeWidth={2.25} />
           </a>
+          {basisPad !== "/gast" && (
+            <button
+              type="button"
+              title="Ververs — haal de nieuwste gegevens op (bv. na een wijziging door een ander gezinslid)"
+              aria-label="Ververs dashboard"
+              disabled={verversPending}
+              onClick={() => startVervers(() => router.refresh())}
+              className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-primair hover:bg-primair-light transition disabled:opacity-60"
+            >
+              <RefreshCw size={16} strokeWidth={2.25} className={verversPending ? "animate-spin" : ""} />
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">

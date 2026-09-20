@@ -4,10 +4,15 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Laat zijn kind vloeiend "in beeld glijden" (fade-in-up) zodra het de
- * viewport binnenkomt tijdens het naar beneden scrollen, en laat het
- * weer wegzakken/faden (fade-out-down) zodra het weer uit beeld
- * verdwijnt bij het omhoog scrollen — telkens opnieuw, niet enkel bij
- * het laden van de pagina.
+ * viewport voor het eerst binnenkomt — eenmalig, blijft daarna zichtbaar.
+ *
+ * Voorheen faded het ook weer wég zodra je even omhoog scrolde (elke
+ * keer opnieuw), wat voelde als "de pagina reageert vreemd" bij gewoon
+ * normaal gebruik: een klik op een link naar een sectie verderop (bv.
+ * "Vul in bij Vaste kosten →") kon die sectie tijdens het scrollen kort
+ * laten verdwijnen/verschuiven doordat hij nog niet als "zichtbaar"
+ * gemarkeerd was. Eenmalig onthullen en de observer meteen loskoppelen
+ * lost dat op, en is ook het gangbare patroon voor dit soort effect.
  */
 export function ScrollReveal({
   children,
@@ -26,10 +31,15 @@ export function ScrollReveal({
     const el = ref.current;
     if (!el) return;
 
-    const observer = new IntersectionObserver(([entry]) => setZichtbaar(entry?.isIntersecting ?? false), {
-      threshold: 0.12,
-      rootMargin: "-40px 0px -40px 0px",
-    });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setZichtbaar(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12, rootMargin: "-40px 0px -40px 0px" }
+    );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
