@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CircleAlert } from "lucide-react";
 import { maakBrowserClient } from "@/lib/supabase/client";
 
@@ -40,26 +41,29 @@ export function WachtwoordHerstellenForm() {
     setBezig(false);
 
     if (error) {
-      setFout("Kon het wachtwoord niet opslaan. Vraag een nieuwe link aan en probeer opnieuw.");
+      setFout("ongeldig");
       return;
     }
 
     setStatus("opgeslagen");
-    setTimeout(() => router.push("/login"), 2000);
+    setTimeout(() => router.push("/login?wachtwoord_gewijzigd=1"), 2000);
   }
 
   if (status === "bezig_met_laden") {
     return <p className="text-sm text-tekst-secundair text-center">Bezig met laden…</p>;
   }
 
-  if (status === "ongeldige_link") {
+  if (status === "ongeldige_link" || fout === "ongeldig") {
     return (
       <div className="text-center py-2">
         <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-tekort-bg mb-3">
           <CircleAlert size={24} color="#F43F5E" strokeWidth={2.25} />
         </div>
-        <p className="font-semibold text-tekst-primair">Deze link is ongeldig of verlopen</p>
-        <p className="text-sm text-tekst-secundair mt-1">Vraag een nieuwe reset-link aan bij een admin.</p>
+        <p className="font-semibold text-tekst-primair">Deze link werkt niet meer</p>
+        <p className="text-sm text-tekst-secundair mt-1">Verlopen of al gebruikt — vraag gerust een nieuwe aan.</p>
+        <Link href="/wachtwoord-vergeten" className="knop-primair w-full mt-4">
+          Vraag een nieuwe link aan
+        </Link>
       </div>
     );
   }

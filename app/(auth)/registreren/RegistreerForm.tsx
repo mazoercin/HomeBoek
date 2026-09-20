@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
-import { MailCheck } from "lucide-react";
+import { MailCheck, TriangleAlert } from "lucide-react";
 import { registreer, type RegistreerState } from "./actions";
 
 const beginState: RegistreerState = { fout: null, gelukt: false, wachtOpBevestiging: false };
@@ -17,15 +17,37 @@ function RegistreerKnop() {
   );
 }
 
+function DoorgaanZonderEmailKnop() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="knop-primair !min-h-[44px]" disabled={pending}>
+      {pending ? "Bezig…" : "Toch doorgaan"}
+    </button>
+  );
+}
+
 export function RegistreerForm() {
   const [state, formAction] = useFormState(registreer, beginState);
   const router = useRouter();
+  // Eén keer getoond, dan mag de echte submit door — de invoer zelf
+  // (incl. het lege e-mailveld) blijft in dezelfde <form> staan, dus
+  // een herhaalde submit stuurt gewoon opnieuw exact wat er al stond.
+  const [toonWaarschuwing, setToonWaarschuwing] = useState(false);
 
   useEffect(() => {
     if (state.gelukt && !state.wachtOpBevestiging) {
       router.push("/dashboard");
     }
   }, [state, router]);
+
+  function opSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (toonWaarschuwing) return;
+    const email = (new FormData(e.currentTarget).get("email") as string | null)?.trim();
+    if (!email) {
+      e.preventDefault();
+      setToonWaarschuwing(true);
+    }
+  }
 
   if (state.gelukt && state.wachtOpBevestiging) {
     return (
@@ -42,7 +64,7 @@ export function RegistreerForm() {
   }
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form action={formAction} onSubmit={opSubmit} className="space-y-4" noValidate>
       <div>
         <label htmlFor="gebruikersnaam" className="veld-label">
           Gebruikersnaam
@@ -55,13 +77,18 @@ export function RegistreerForm() {
           required
           className="veld-input"
         />
+        <p className="text-xs text-tekst-secundair mt-1.5">Mag verzonnen zijn — dit is wat je gebruikt om in te loggen.</p>
       </div>
 
       <div>
         <label htmlFor="email" className="veld-label">
           E-mailadres
         </label>
-        <input id="email" name="email" type="email" autoComplete="email" required className="veld-input" />
+        <input id="email" name="email" type="email" autoComplete="email" className="veld-input" />
+        <p className="text-xs text-tekst-secundair mt-1.5">
+          Optioneel. Alleen nodig om je wachtwoord te herstellen. Laat leeg als je liever geen e-mailadres opgeeft. Een
+          verzonnen e-mailadres werkt niet: je kan het niet bevestigen en dus niet inloggen.
+        </p>
       </div>
 
       <div>
@@ -94,13 +121,37 @@ export function RegistreerForm() {
         />
       </div>
 
-      {state.fout && (
-        <p className="veld-fout" role="alert">
-          {state.fout}
-        </p>
+      {toonWaarschuwing ? (
+        <div className="rounded-xl border border-dashed border-tekort/30 p-4">
+          <div className="flex items-start gap-2.5">
+            <TriangleAlert size={18} color="#F43F5E" strokeWidth={2.25} className="shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-tekst-primair">
+                Zonder e-mailadres kan je je wachtwoord niet herstellen. Bewaar het goed.
+              </p>
+              <div className="flex gap-2 mt-3">
+                <DoorgaanZonderEmailKnop />
+                <button
+                  type="button"
+                  onClick={() => setToonWaarschuwing(false)}
+                  className="knop-secundair !min-h-[44px] !px-4 shrink-0"
+                >
+                  Terug
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {state.fout && (
+            <p className="veld-fout" role="alert">
+              {state.fout}
+            </p>
+          )}
+          <RegistreerKnop />
+        </>
       )}
-
-      <RegistreerKnop />
     </form>
   );
 }

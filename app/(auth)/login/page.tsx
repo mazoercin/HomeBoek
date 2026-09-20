@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { Home, PiggyBank } from "lucide-react";
+import { Home, PiggyBank, CircleCheck } from "lucide-react";
 import { LoginForm } from "./LoginForm";
 
-export default function LoginPagina() {
+export default function LoginPagina({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
+  const wachtwoordGewijzigd = searchParams.wachtwoord_gewijzigd === "1";
+
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-primair-light via-white dark:via-kaart to-secundair-light">
       <div className="w-full max-w-sm animate-fade-in-up">
@@ -20,6 +22,13 @@ export default function LoginPagina() {
           <h1 className="text-2xl font-extrabold text-tekst-primair tracking-tight">HuisBalans</h1>
           <p className="text-tekst-secundair mt-1">je digitale huishoudboekje voor het hele gezin</p>
         </div>
+
+        {wachtwoordGewijzigd && (
+          <div className="flex items-center gap-2 rounded-xl bg-succes-bg text-succes text-sm font-semibold px-4 py-3 mb-4">
+            <CircleCheck size={18} strokeWidth={2.25} className="shrink-0" />
+            Je wachtwoord is gewijzigd. Log opnieuw in.
+          </div>
+        )}
 
         <div className="kaart shadow-card-hover">
           <LoginForm />

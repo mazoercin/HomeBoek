@@ -6,6 +6,7 @@ import { maakServerClient } from "@/lib/supabase/server";
 import { zetSessieCookie } from "@/lib/auth/session";
 import { haalGebruikersProfiel, maakGebruikersProfiel, haalEmailVoorIdentificator } from "@/lib/auth/gebruiker";
 import { haalGezouteHash, haalGezouteIpHash, magDoor, registreerPoging } from "@/lib/auth/rate-limit";
+import { wachtTotMinimaleTijd } from "@/lib/auth/timing";
 import { logger } from "@/lib/logger.server";
 
 export interface LoginState {
@@ -13,19 +14,12 @@ export interface LoginState {
 }
 
 const LOGIN_VENSTER_MINUTEN = 15;
-/** Ondergrens voor de responstijd, zodat een onbekende gebruikersnaam niet aan een kortere responstijd te herkennen is dan een bestaande gebruikersnaam met een fout wachtwoord. */
-const MINIMALE_RESPONSTIJD_MS = 400;
 
 function vertaalFout(bericht: string): string {
   if (bericht.toLowerCase().includes("email not confirmed")) {
     return "Bevestig eerst je e-mailadres via de link die we je gestuurd hebben.";
   }
   return "Gebruikersnaam of wachtwoord klopt niet.";
-}
-
-async function wachtTotMinimaleTijd(gestartOp: number): Promise<void> {
-  const resterend = MINIMALE_RESPONSTIJD_MS - (Date.now() - gestartOp);
-  if (resterend > 0) await new Promise((resolve) => setTimeout(resolve, resterend));
 }
 
 /**

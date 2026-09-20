@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { login, type LoginState } from "./actions";
 
@@ -38,6 +39,11 @@ export function LoginForm() {
           required
           className="veld-input"
         />
+        <div className="flex justify-end mt-1.5">
+          <Link href="/wachtwoord-vergeten" className="text-sm font-semibold text-primair hover:underline">
+            Wachtwoord vergeten?
+          </Link>
+        </div>
       </div>
 
       {state.fout && (

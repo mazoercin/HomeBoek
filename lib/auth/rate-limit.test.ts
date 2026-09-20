@@ -88,3 +88,29 @@ describe("magInloggenLogica — beide dimensies samen", () => {
     expect(magInloggenLogica(pogingen, "gebruiker-a", "ip-1", NU)).toBe(true);
   });
 });
+
+describe("magInloggenLogica — hergebruikt voor wachtwoord-reset (3 per uur / 10 per uur)", () => {
+  const RESET_OPTIES = { vensterMs: 60 * MINUUT, maxIdentificator: 3, maxIp: 10 };
+
+  it("mag door onder de limiet (2 van de 3 aanvragen)", () => {
+    const pogingen = Array.from({ length: 2 }, (_, i) => poging({ aangemaaktOp: NU - i * MINUUT }));
+    expect(magInloggenLogica(pogingen, "gebruiker-a", null, NU, RESET_OPTIES)).toBe(true);
+  });
+
+  it("blokkeert exact op de limiet (3 aanvragen binnen het uur)", () => {
+    const pogingen = Array.from({ length: 3 }, (_, i) => poging({ aangemaaktOp: NU - i * MINUUT }));
+    expect(magInloggenLogica(pogingen, "gebruiker-a", null, NU, RESET_OPTIES)).toBe(false);
+  });
+
+  it("telt niet meer mee na het venster van 60 minuten", () => {
+    const pogingen = Array.from({ length: 3 }, (_, i) => poging({ aangemaaktOp: NU - 90 * MINUUT - i * MINUUT }));
+    expect(magInloggenLogica(pogingen, "gebruiker-a", null, NU, RESET_OPTIES)).toBe(true);
+  });
+
+  it("blokkeert exact op de IP-limiet (10), ook al zijn het allemaal andere identificators", () => {
+    const pogingen = Array.from({ length: 10 }, (_, i) =>
+      poging({ identificatorHash: `gebruiker-${i}`, ipHash: "ip-gedeeld", aangemaaktOp: NU - i * SECONDE })
+    );
+    expect(magInloggenLogica(pogingen, null, "ip-gedeeld", NU, RESET_OPTIES)).toBe(false);
+  });
+});

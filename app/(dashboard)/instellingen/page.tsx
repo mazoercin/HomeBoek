@@ -1,15 +1,18 @@
 import { vereisHousehold } from "@/lib/auth/household";
 import { leesLogRegels } from "@/lib/logger.server";
 import { haalHouseholdOverzicht } from "@/lib/data/household";
+import { isNepEmail } from "@/lib/auth/nep-email";
 import { LogViewer } from "@/components/instellingen/LogViewer";
 import { HouseholdNaamKaart } from "@/components/instellingen/HouseholdNaamKaart";
 import { GebruikersToevoegenKaart } from "@/components/instellingen/GebruikersToevoegenKaart";
+import { HerstelEmailKaart } from "@/components/instellingen/HerstelEmailKaart";
 import { LedenBeheer } from "@/components/instellingen/LedenBeheer";
 import { wisLogboek } from "./actions";
 import {
   zetHouseholdInstellingen,
   maakGezinsAccount,
   resetLidWachtwoord,
+  zetEigenEmail,
   wijzigLidRol,
   verwijderLid,
   draagEigenaarschapOver,
@@ -29,6 +32,7 @@ export default async function InstellingenPagina() {
   ]);
 
   const aantalExtraLeden = overzicht.leden.filter((lid) => lid.role !== "owner").length;
+  const eigenEmail = overzicht.leden.find((lid) => lid.user_id === context.gebruikerId)?.profiel?.email ?? "";
 
   return (
     <div className="space-y-6">
@@ -49,6 +53,8 @@ export default async function InstellingenPagina() {
       />
 
       {isOwner && <GebruikersToevoegenKaart aantalExtraLeden={aantalExtraLeden} onAanmaken={maakGezinsAccount} />}
+
+      {isOwner && <HerstelEmailKaart huidigeEmail={eigenEmail} isNepAdres={isNepEmail(eigenEmail)} onOpslaan={zetEigenEmail} />}
 
       <LedenBeheer
         leden={overzicht.leden}

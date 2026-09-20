@@ -1,13 +1,14 @@
 "use server";
 
-import { randomBytes } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { maakServerClient, maakServiceClient } from "@/lib/supabase/server";
 import { vereisHousehold, vereisHouseholdRol } from "@/lib/auth/household";
 import { maakGebruikersProfiel } from "@/lib/auth/gebruiker";
 import { valideerGebruikersnaamFormaat } from "@/lib/auth/gebruikersnaam";
+import { maakNepEmail } from "@/lib/auth/nep-email";
 import { haalIpHash, magDoor, registreerPoging } from "@/lib/auth/rate-limit";
+import { haalSiteUrl } from "@/lib/auth/site-url";
 import { logger } from "@/lib/logger.server";
 import type { HouseholdRol, Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
 
@@ -65,7 +66,7 @@ export async function maakGezinsAccount(input: {
   // Supabase Auth vereist altijd een e-mailadres — vult de eigenaar er
   // zelf geen in, dan gebruiken we een intern, nooit-getoond adres.
   // Enkel de gebruikersnaam wordt gebruikt om in te loggen.
-  const email = input.email?.trim() || `${gebruikersnaam.toLowerCase()}.${randomBytes(4).toString("hex")}@leden.homeboek.intern`;
+  const email = input.email?.trim() || maakNepEmail(gebruikersnaam);
 
   const { data: nieuweGebruiker, error: createError } = await supabase.auth.admin.createUser({
     email,
@@ -150,6 +151,42 @@ export async function resetLidWachtwoord(
   if (error) {
     logger.error({ code: "DB_001", message: "Kon wachtwoord niet resetten", context: { userId, error: error.message } });
     return { gelukt: false, foutmelding: "Kon het wachtwoord niet wijzigen." };
+  }
+
+  return { gelukt: true };
+}
+
+/**
+ * Voegt een echt herstel-e-mailadres toe (of wijzigt een bestaand
+ * adres) voor de EIGEN account van de eigenaar — niet voor gezinsleden.
+ * Gebruikt bewust de gewone, sessie-gebonden client: updateUser() werkt
+ * altijd op de ingelogde gebruiker zelf, nooit op een willekeurig
+ * user-id. Het nieuwe adres wordt pas echt gebruikt (profiles.email
+ * gelijkgetrokken) nadat de bevestigingsmail gevolgd is — zie
+ * app/auth/callback/route.ts.
+ */
+export async function zetEigenEmail(nieuweEmail: string): Promise<{ gelukt: boolean; foutmelding?: string }> {
+  await vereisHouseholdRol("owner");
+
+  const email = nieuweEmail.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return { gelukt: false, foutmelding: "Vul een geldig e-mailadres in." };
+  }
+
+  const siteUrl = haalSiteUrl();
+  if (!siteUrl) {
+    return { gelukt: false, foutmelding: "Kon geen bevestigingslink opbouwen. Probeer het later opnieuw." };
+  }
+
+  const supabase = maakServerClient();
+  const { error } = await supabase.auth.updateUser(
+    { email },
+    { emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent("/instellingen")}` }
+  );
+
+  if (error) {
+    logger.error({ code: "AUTH_001", message: "Kon e-mailadres niet wijzigen", context: { error: error.message } });
+    return { gelukt: false, foutmelding: "Kon het e-mailadres niet wijzigen." };
   }
 
   return { gelukt: true };

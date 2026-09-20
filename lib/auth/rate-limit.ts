@@ -10,7 +10,11 @@ const LOGIN_VENSTER_MINUTEN = 15;
 const LOGIN_MAX_POGINGEN_IDENTIFICATOR = 5;
 const LOGIN_MAX_POGINGEN_IP = 20;
 
-export type PogingSoort = "accept" | "aanmaken" | "login";
+const RESET_VENSTER_MINUTEN = 60;
+const RESET_MAX_POGINGEN_IDENTIFICATOR = 3;
+const RESET_MAX_POGINGEN_IP = 10;
+
+export type PogingSoort = "accept" | "aanmaken" | "login" | "reset";
 
 /** Gehashte client-IP (nooit het echte IP bewaren) — best-effort, `null` als de header ontbreekt. */
 export function haalIpHash(): string | null {
@@ -53,9 +57,10 @@ export function haalGezouteIpHash(): string | null {
  * key — de tabel zelf is voor iedereen anders ontoegankelijk. Fail-open
  * bij een DB-probleem (een storing mag nooit de hele flow blokkeren).
  *
- * "login" heeft een eigen implementatie (zie magInloggen hieronder): een
- * gedeelde OR-telling zoals "accept"/"aanmaken" past niet bij twee
- * aparte drempels (per identificator én per IP).
+ * "login" en "reset" hebben een eigen implementatie (zie
+ * magDoorMetTweeLimieten hieronder): een gedeelde OR-telling zoals
+ * "accept"/"aanmaken" past niet bij twee aparte drempels (per
+ * identificator én per IP).
  */
 export async function magDoor(
   soort: PogingSoort,
@@ -63,7 +68,24 @@ export async function magDoor(
   gebruikerIdOfIdentificatorHash: string | null
 ): Promise<boolean> {
   if (soort === "login") {
-    return magInloggen(ipHash, gebruikerIdOfIdentificatorHash);
+    return magDoorMetTweeLimieten(
+      "login",
+      ipHash,
+      gebruikerIdOfIdentificatorHash,
+      LOGIN_VENSTER_MINUTEN,
+      LOGIN_MAX_POGINGEN_IDENTIFICATOR,
+      LOGIN_MAX_POGINGEN_IP
+    );
+  }
+  if (soort === "reset") {
+    return magDoorMetTweeLimieten(
+      "reset",
+      ipHash,
+      gebruikerIdOfIdentificatorHash,
+      RESET_VENSTER_MINUTEN,
+      RESET_MAX_POGINGEN_IDENTIFICATOR,
+      RESET_MAX_POGINGEN_IP
+    );
   }
 
   if (!ipHash && !gebruikerIdOfIdentificatorHash) return true;
@@ -89,10 +111,10 @@ export async function magDoor(
 }
 
 /**
- * Registreert een poging. Voor "login" ruimt dit meteen ook rijen ouder
- * dan 24 uur op (enkel soort='login' — accept/aanmaken blijven
- * ongemoeid) zodat de tabel niet ongelimiteerd groeit; geen pg_cron
- * nodig (die extensie staat mogelijk niet aan).
+ * Registreert een poging. Voor "login"/"reset" ruimt dit meteen ook
+ * rijen ouder dan 24 uur op (enkel diezelfde soort — accept/aanmaken
+ * blijven ongemoeid) zodat de tabel niet ongelimiteerd groeit; geen
+ * pg_cron nodig (die extensie staat mogelijk niet aan).
  */
 export async function registreerPoging(
   soort: PogingSoort,
@@ -102,14 +124,14 @@ export async function registreerPoging(
 ): Promise<void> {
   const supabase = maakServiceClient();
 
-  if (soort === "login") {
+  if (soort === "login" || soort === "reset") {
     await supabase
       .from("invite_pogingen")
       .insert({ soort, ip_hash: ipHash, identificator_hash: gebruikerIdOfIdentificatorHash, gelukt });
     await supabase
       .from("invite_pogingen")
       .delete()
-      .eq("soort", "login")
+      .eq("soort", soort)
       .lt("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     return;
   }
@@ -128,12 +150,15 @@ export interface LoginPogingRecord {
 }
 
 /**
- * Pure beslissingslogica voor de login-rate-limit — bewust los van
- * Supabase zodat dit zonder live databank te testen is (net als
- * lib/calculations/*). Telt enkel mislukte pogingen binnen het venster,
- * en voor de identificator-limiet enkel de mislukkingen NA de laatste
- * geslaagde poging van diezelfde identificator: dat is de "reset bij
- * succes" — zonder dat daarvoor iets verwijderd hoeft te worden.
+ * Pure beslissingslogica, gedeeld door login én wachtwoord-reset —
+ * bewust los van Supabase zodat dit zonder live databank te testen is
+ * (net als lib/calculations/*). Telt enkel mislukte pogingen binnen het
+ * venster, en voor de identificator-limiet enkel de mislukkingen NA de
+ * laatste geslaagde poging van diezelfde identificator: dat is de
+ * "reset bij succes" bij login — zonder dat daarvoor iets verwijderd
+ * hoeft te worden. Wachtwoord-reset registreert nooit een succes (zie
+ * de "reset"-tak in registreerPoging-aanroepen), dus daar telt gewoon
+ * elke mislukte poging plat mee, zonder ooit te resetten.
  */
 export function magInloggenLogica(
   pogingen: LoginPogingRecord[],
@@ -165,10 +190,17 @@ export function magInloggenLogica(
   return aantalIdentificator < maxIdentificator && aantalIp < maxIp;
 }
 
-async function magInloggen(ipHash: string | null, identificatorHash: string | null): Promise<boolean> {
+async function magDoorMetTweeLimieten(
+  soort: "login" | "reset",
+  ipHash: string | null,
+  identificatorHash: string | null,
+  vensterMinuten: number,
+  maxIdentificator: number,
+  maxIp: number
+): Promise<boolean> {
   if (!ipHash && !identificatorHash) return true;
   const supabase = maakServiceClient();
-  const sinds = new Date(Date.now() - LOGIN_VENSTER_MINUTEN * 60 * 1000).toISOString();
+  const sinds = new Date(Date.now() - vensterMinuten * 60 * 1000).toISOString();
 
   const voorwaarden = [
     identificatorHash ? `identificator_hash.eq.${identificatorHash}` : null,
@@ -180,7 +212,7 @@ async function magInloggen(ipHash: string | null, identificatorHash: string | nu
   const { data, error } = await supabase
     .from("invite_pogingen")
     .select("identificator_hash, ip_hash, gelukt, created_at")
-    .eq("soort", "login")
+    .eq("soort", soort)
     .gte("created_at", sinds)
     .or(voorwaarden);
 
@@ -193,5 +225,9 @@ async function magInloggen(ipHash: string | null, identificatorHash: string | nu
     aangemaaktOp: new Date(rij.created_at).getTime(),
   }));
 
-  return magInloggenLogica(pogingen, identificatorHash, ipHash, Date.now());
+  return magInloggenLogica(pogingen, identificatorHash, ipHash, Date.now(), {
+    vensterMs: vensterMinuten * 60 * 1000,
+    maxIdentificator,
+    maxIp,
+  });
 }
