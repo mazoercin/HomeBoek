@@ -1,7 +1,7 @@
 import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
 import { berekenTotaalInkomen, berekenOpenstaandBedrag, berekenBijdragenAftrekVoorMaand } from "@/lib/calculations";
-import type { Inkomen, ExtraInkomen, VasteKost, Factuur, ExtraUitgave, DoelBijdrage } from "@/types/database";
+import type { Inkomen, ExtraInkomen, InkomenWeekBedrag, VasteKost, Factuur, ExtraUitgave, DoelBijdrage } from "@/types/database";
 
 export interface MaandSamenvatting {
   maand: string;
@@ -30,18 +30,36 @@ export async function haalMaandOverzicht(householdId: string): Promise<{ maanden
   const supabase = maakServerClient();
 
   try {
-    const [maandenRes, inkomenRes, extraInkomenRes, vasteKostenRes, facturenRes, extraUitgavenRes, doelBijdragenRes] =
-      await Promise.all([
-        supabase.from("dashboard_maanden").select("*").eq("household_id", householdId).order("maand"),
-        supabase.from("inkomen").select("*").eq("household_id", householdId),
-        supabase.from("extra_inkomen").select("*").eq("household_id", householdId),
-        supabase.from("vaste_kosten").select("*").eq("household_id", householdId),
-        supabase.from("facturen").select("*").eq("household_id", householdId),
-        supabase.from("extra_uitgaven").select("*").eq("household_id", householdId),
-        supabase.from("doel_bijdragen").select("*").eq("household_id", householdId),
-      ]);
+    const [
+      maandenRes,
+      inkomenRes,
+      extraInkomenRes,
+      inkomenWeekBedragenRes,
+      vasteKostenRes,
+      facturenRes,
+      extraUitgavenRes,
+      doelBijdragenRes,
+    ] = await Promise.all([
+      supabase.from("dashboard_maanden").select("*").eq("household_id", householdId).order("maand"),
+      supabase.from("inkomen").select("*").eq("household_id", householdId),
+      supabase.from("extra_inkomen").select("*").eq("household_id", householdId),
+      supabase.from("inkomen_weekbedragen").select("*").eq("household_id", householdId),
+      supabase.from("vaste_kosten").select("*").eq("household_id", householdId),
+      supabase.from("facturen").select("*").eq("household_id", householdId),
+      supabase.from("extra_uitgaven").select("*").eq("household_id", householdId),
+      supabase.from("doel_bijdragen").select("*").eq("household_id", householdId),
+    ]);
 
-    const alleResultaten = [maandenRes, inkomenRes, extraInkomenRes, vasteKostenRes, facturenRes, extraUitgavenRes, doelBijdragenRes];
+    const alleResultaten = [
+      maandenRes,
+      inkomenRes,
+      extraInkomenRes,
+      inkomenWeekBedragenRes,
+      vasteKostenRes,
+      facturenRes,
+      extraUitgavenRes,
+      doelBijdragenRes,
+    ];
     const eersteFout = alleResultaten.find((r) => r.error);
     if (eersteFout?.error) {
       logger.error({
@@ -54,6 +72,7 @@ export async function haalMaandOverzicht(householdId: string): Promise<{ maanden
 
     const inkomenPerMaand = groepeerPerMaand((inkomenRes.data ?? []) as Inkomen[]);
     const extraInkomenPerMaand = groepeerPerMaand((extraInkomenRes.data ?? []) as ExtraInkomen[]);
+    const weekBedragen = (inkomenWeekBedragenRes.data ?? []) as InkomenWeekBedrag[];
     const vasteKostenPerMaand = groepeerPerMaand((vasteKostenRes.data ?? []) as VasteKost[]);
     const facturenPerMaand = groepeerPerMaand((facturenRes.data ?? []) as Factuur[]);
     const extraUitgavenPerMaand = groepeerPerMaand((extraUitgavenRes.data ?? []) as ExtraUitgave[]);
@@ -65,6 +84,7 @@ export async function haalMaandOverzicht(householdId: string): Promise<{ maanden
         berekenTotaalInkomen({
           inkomen: inkomenPerMaand.get(maand) ?? [],
           extraInkomen: extraInkomenPerMaand.get(maand) ?? [],
+          weekBedragen,
           maand,
         }) - berekenBijdragenAftrekVoorMaand(doelBijdragen, maand);
       const uitgaven = berekenOpenstaandBedrag({

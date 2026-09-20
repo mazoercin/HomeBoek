@@ -1,8 +1,15 @@
-import type { Inkomen, ExtraInkomen, VasteKost, Factuur, ExtraUitgave, Doel } from "@/types/database";
+import type { Inkomen, ExtraInkomen, InkomenWeekBedrag, VasteKost, Factuur, ExtraUitgave, Doel } from "@/types/database";
 
 export interface InkomenInput {
   inkomen: Inkomen[];
   extraInkomen: ExtraInkomen[];
+  /**
+   * Optionele per-week bedragen voor wekelijkse inkomensposten (zie
+   * InkomenWeekBedrag) — enkel items met `inkomen_id` gelijk aan een
+   * post uit `inkomen` tellen mee, dus gerust de volledige lijst van
+   * het huishouden meegeven (geen voorfiltering per maand nodig).
+   */
+  weekBedragen: InkomenWeekBedrag[];
   /** De maand waarvoor berekend wordt, als "YYYY-MM". */
   maand: string;
 }

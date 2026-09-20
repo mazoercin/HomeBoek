@@ -300,6 +300,58 @@ export async function verwijderInkomen(id: string) {
   );
 }
 
+/**
+ * Vervangt (delete + insert) de volledige set weekbedragen van één
+ * inkomenspost — eenvoudiger en minder foutgevoelig dan losse
+ * per-week-upserts bijhouden, en de hoeveelheden zijn zo klein (max. 4
+ * rijen) dat dit geen probleem is.
+ */
+export async function zetInkomenWeekBedragen(inkomenId: string, weekBedragen: { week_nummer: number; bedrag: number }[]) {
+  const context = await vereisHousehold();
+  const supabase = maakServerClient();
+
+  try {
+    const { data: post } = await supabase
+      .from("inkomen")
+      .select("id")
+      .eq("id", inkomenId)
+      .eq("household_id", context.householdId)
+      .maybeSingle();
+    if (!post) {
+      return { gelukt: false, foutmelding: "Deze inkomenspost hoort niet bij jouw huishouden." };
+    }
+
+    const { error: deleteError } = await supabase
+      .from("inkomen_weekbedragen")
+      .delete()
+      .eq("inkomen_id", inkomenId)
+      .eq("household_id", context.householdId);
+    if (deleteError) throw deleteError;
+
+    if (weekBedragen.length > 0) {
+      const { error: insertError } = await supabase.from("inkomen_weekbedragen").insert(
+        weekBedragen.map((w) => ({
+          inkomen_id: inkomenId,
+          household_id: context.householdId,
+          week_nummer: w.week_nummer,
+          bedrag: w.bedrag,
+        }))
+      );
+      if (insertError) throw insertError;
+    }
+
+    opnieuwValideren();
+    return { gelukt: true };
+  } catch (error) {
+    logger.error({
+      code: "DB_001",
+      message: "Kon weekbedragen niet opslaan",
+      context: { inkomenId, error: error instanceof Error ? error.message : String(error) },
+    });
+    return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
+  }
+}
+
 // ---------- Maanden ----------
 
 /**

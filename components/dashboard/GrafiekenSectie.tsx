@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { PieChart as PieChartIcon, Plus } from "lucide-react";
-import type { Categorie, InkomenBron, Inkomen, VasteKost, ExtraUitgave } from "@/types/database";
+import type { Categorie, InkomenBron, Inkomen, InkomenWeekBedrag, VasteKost, ExtraUitgave } from "@/types/database";
 import { CATEGORIE_INFO } from "@/types/database";
-import { berekenMaandequivalent } from "@/lib/calculations/inkomen";
+import { berekenInkomenMaandbedrag } from "@/lib/calculations/inkomen";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 
 const KLEUREN = ["#6366F1", "#F59E0B", "#10B981", "#F43F5E", "#0EA5E9", "#8B5CF6", "#EC4899", "#64748B"];
@@ -165,6 +165,7 @@ function EenGrafiek({
 
 interface Props {
   inkomen: Inkomen[];
+  weekBedragen: InkomenWeekBedrag[];
   vasteKosten: VasteKost[];
   extraUitgaven: ExtraUitgave[];
   onInkomenToevoegen: (data: {
@@ -193,16 +194,22 @@ interface Props {
  */
 export function GrafiekenSectie({
   inkomen,
+  weekBedragen,
   vasteKosten,
   extraUitgaven,
   onInkomenToevoegen,
   onVasteKostToevoegen,
   onExtraUitgaveToevoegen,
 }: Props) {
-  const inkomenData: Segment[] = inkomen.map((i) => ({
-    naam: i.label,
-    waarde: berekenMaandequivalent(i.bedrag, i.frequentie),
-  }));
+  const inkomenData: Segment[] = inkomen.map((i) => {
+    let waarde: number;
+    try {
+      waarde = berekenInkomenMaandbedrag(i, weekBedragen);
+    } catch {
+      waarde = 0;
+    }
+    return { naam: i.label, waarde };
+  });
 
   const kostenPerCategorie = new Map<string, number>();
   for (const kost of vasteKosten) {

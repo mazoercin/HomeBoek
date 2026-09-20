@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger.server";
 import type {
   Inkomen,
   ExtraInkomen,
+  InkomenWeekBedrag,
   VasteKost,
   Factuur,
   ExtraUitgave,
@@ -15,6 +16,8 @@ import type {
 export interface DashboardData {
   inkomen: Inkomen[];
   extraInkomen: ExtraInkomen[];
+  /** Per-week bedragen voor wekelijkse inkomensposten van dit huishouden (niet per maand gefilterd — zie InkomenInput). */
+  inkomenWeekBedragen: InkomenWeekBedrag[];
   vasteKosten: VasteKost[];
   facturen: Factuur[];
   extraUitgaven: ExtraUitgave[];
@@ -28,6 +31,7 @@ export interface DashboardData {
 const LEEG: DashboardData = {
   inkomen: [],
   extraInkomen: [],
+  inkomenWeekBedragen: [],
   vasteKosten: [],
   facturen: [],
   extraUitgaven: [],
@@ -60,6 +64,7 @@ export async function haalDashboardData(householdId: string, maand: string): Pro
     const [
       inkomen,
       extraInkomen,
+      inkomenWeekBedragen,
       vasteKosten,
       facturen,
       extraUitgaven,
@@ -70,6 +75,10 @@ export async function haalDashboardData(householdId: string, maand: string): Pro
     ] = await Promise.all([
       supabase.from("inkomen").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
       supabase.from("extra_inkomen").select("*").eq("household_id", householdId).eq("maand", maand),
+      // Niet per maand gefilterd (die kolom bestaat hier niet) — de
+      // koppeling met een maand loopt via inkomen_id naar de al wél
+      // maand-gefilterde `inkomen`-rijen hierboven (zie InkomenInput).
+      supabase.from("inkomen_weekbedragen").select("*").eq("household_id", householdId),
       supabase.from("vaste_kosten").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
       supabase.from("facturen").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
       supabase.from("extra_uitgaven").select("*").eq("household_id", householdId).eq("maand", maand).order("created_at"),
@@ -86,6 +95,7 @@ export async function haalDashboardData(householdId: string, maand: string): Pro
     const alleResultaten = [
       inkomen,
       extraInkomen,
+      inkomenWeekBedragen,
       vasteKosten,
       facturen,
       extraUitgaven,
@@ -108,6 +118,7 @@ export async function haalDashboardData(householdId: string, maand: string): Pro
     return {
       inkomen: inkomen.data ?? [],
       extraInkomen: extraInkomen.data ?? [],
+      inkomenWeekBedragen: inkomenWeekBedragen.data ?? [],
       vasteKosten: vasteKosten.data ?? [],
       facturen: facturen.data ?? [],
       extraUitgaven: extraUitgaven.data ?? [],

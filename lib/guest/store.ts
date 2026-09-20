@@ -1,6 +1,7 @@
 import type {
   Inkomen,
   ExtraInkomen,
+  InkomenWeekBedrag,
   VasteKost,
   Factuur,
   ExtraUitgave,
@@ -15,6 +16,7 @@ const SLEUTEL = "saldo_gast_v1";
 export interface GastMaandData {
   inkomen: Inkomen[];
   extraInkomen: ExtraInkomen[];
+  inkomenWeekBedragen: InkomenWeekBedrag[];
   vasteKosten: VasteKost[];
   facturen: Factuur[];
   extraUitgaven: ExtraUitgave[];
@@ -31,7 +33,7 @@ export interface GastData {
 }
 
 export function leegGastMaand(): GastMaandData {
-  return { inkomen: [], extraInkomen: [], vasteKosten: [], facturen: [], extraUitgaven: [] };
+  return { inkomen: [], extraInkomen: [], inkomenWeekBedragen: [], vasteKosten: [], facturen: [], extraUitgaven: [] };
 }
 
 export function leegGastData(): GastData {
@@ -89,8 +91,15 @@ export function nu(): string {
 /** Vaste placeholder-metadata voor de HuishoudenRij-velden — in gast-modus is er (nog) geen echt huishouden. */
 export const GAST_METADATA = { household_id: "gast", created_by: null, updated_by: null, version: 1 } as const;
 
+/**
+ * Vult ontbrekende velden aan met leegGastMaand() — nodig omdat een
+ * eerder in localStorage bewaarde maand (van vóór een nieuw veld zoals
+ * inkomenWeekBedragen bestond) dat veld nooit gaat "spontaan" krijgen
+ * via het shallow-merge in leesGastData().
+ */
 export function maandVan(data: GastData, maand: string): GastMaandData {
-  return data.maanden[maand] ?? leegGastMaand();
+  const opgeslagen = data.maanden[maand];
+  return opgeslagen ? { ...leegGastMaand(), ...opgeslagen } : leegGastMaand();
 }
 
 export function metMaand(data: GastData, maand: string, wijzig: (m: GastMaandData) => GastMaandData): GastData {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { RotateCcw } from "lucide-react";
 import type { DashboardData } from "@/lib/data/dashboard";
 import {
   berekenTotaalInkomen,
@@ -35,7 +36,18 @@ import type { DashboardActies, RegistreerMaandActie } from "@/types/dashboard-ac
  * niet bij — die blijven op hun vaste plek, slepen zou daar meer
  * verwarren dan helpen.
  */
-const STANDAARD_VOLGORDE = ["samenvatting", "grafieken", "inkomen", "kosten", "wat-als", "doelen-investeringen", "voorstellen"];
+const STANDAARD_VOLGORDE = [
+  "samenvatting",
+  "grafieken",
+  "inkomen",
+  "kosten-vast",
+  "kosten-facturen",
+  "kosten-extra",
+  "wat-als",
+  "doelen",
+  "investeringen",
+  "voorstellen",
+];
 
 /**
  * Voegt de opgeslagen volgorde samen met de vaste set kader-id's: onbekende
@@ -109,6 +121,7 @@ export function DashboardClient({
       berekenTotaalInkomen({
         inkomen: data.inkomen,
         extraInkomen: data.extraInkomen,
+        weekBedragen: data.inkomenWeekBedragen,
         maand: huidigeMaand,
       }) - berekenBijdragenAftrekVoorMaand(data.doelBijdragen, huidigeMaand),
     [data, huidigeMaand]
@@ -207,6 +220,15 @@ export function DashboardClient({
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
   );
 
+  const volgordeAangepast = volgordeIds.some((id, i) => id !== STANDAARD_VOLGORDE[i]);
+
+  function herstelStandaardVolgorde() {
+    setVolgordeIds(STANDAARD_VOLGORDE);
+    startVolgordeTransition(() => {
+      void acties.zetDashboardVolgorde(STANDAARD_VOLGORDE);
+    });
+  }
+
   function opDragEinde(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -253,6 +275,7 @@ export function DashboardClient({
         <ScrollReveal>
           <GrafiekenSectie
             inkomen={data.inkomen}
+            weekBedragen={data.inkomenWeekBedragen}
             vasteKosten={data.vasteKosten}
             extraUitgaven={extraUitgaven}
             onInkomenToevoegen={(d) => acties.voegInkomenToe(d, huidigeMaand)}
@@ -268,58 +291,68 @@ export function DashboardClient({
         <ScrollReveal>
           <InkomenSectie
             items={data.inkomen}
+            weekBedragen={data.inkomenWeekBedragen}
             onToevoegen={(d) => acties.voegInkomenToe(d, huidigeMaand)}
             onVerwijderen={acties.verwijderInkomen}
+            onZetWeekBedragen={acties.zetInkomenWeekBedragen}
           />
         </ScrollReveal>
       ),
     },
-    kosten: {
+    "kosten-vast": {
       zichtbaar: true,
       element: (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
-          <ScrollReveal vertraging={0}>
-            <KostenKader
-              titel="Vaste kosten"
-              ankerId="uitgaven-vast"
-              stapTip={{
-                nummer: 2,
-                titel: "Voeg je vaste kosten toe",
-                uitleg: "Kosten die maandelijks terugkomen en niet zomaar stopbaar zijn: huur, verzekering, kredieten.",
-                voorbeeld: "Huur — €1750,00",
-              }}
-              items={data.vasteKosten}
-              onZetBetaald={acties.zetVasteKostBetaald}
-              onToevoegen={(d) => acties.voegVasteKostToe(d, huidigeMaand)}
-              onVerwijderen={acties.verwijderVasteKost}
-            />
-          </ScrollReveal>
-          <ScrollReveal vertraging={80}>
-            <KostenKader
-              titel="Facturen"
-              ankerId="facturen"
-              stapTip={{
-                nummer: 3,
-                titel: "Voeg je facturen toe",
-                uitleg: "Elektriciteit, mazout/gas, water, internet — alles wat per factuur binnenkomt.",
-                voorbeeld: "Elektriciteit — €120,00",
-              }}
-              items={data.facturen}
-              onZetBetaald={acties.zetFactuurBetaald}
-              onToevoegen={(d) => acties.voegFactuurToe(d, huidigeMaand)}
-              onVerwijderen={acties.verwijderFactuur}
-            />
-          </ScrollReveal>
-          <ScrollReveal vertraging={160}>
-            <ExtraUitgavenKader
-              items={extraUitgaven}
-              onToevoegen={(d) => acties.voegExtraUitgaveToe(d, huidigeMaand)}
-              onVerwijderen={acties.verwijderExtraUitgave}
-              onZetGeskipt={acties.zetExtraUitgaveGeskipt}
-              highlightId={nieuwItemId}
-            />
-          </ScrollReveal>
-        </div>
+        <ScrollReveal>
+          <KostenKader
+            titel="Vaste kosten"
+            ankerId="uitgaven-vast"
+            stapTip={{
+              nummer: 2,
+              titel: "Voeg je vaste kosten toe",
+              uitleg: "Kosten die maandelijks terugkomen en niet zomaar stopbaar zijn: huur, verzekering, kredieten.",
+              voorbeeld: "Huur — €1750,00",
+            }}
+            items={data.vasteKosten}
+            onZetBetaald={acties.zetVasteKostBetaald}
+            onToevoegen={(d) => acties.voegVasteKostToe(d, huidigeMaand)}
+            onVerwijderen={acties.verwijderVasteKost}
+          />
+        </ScrollReveal>
+      ),
+    },
+    "kosten-facturen": {
+      zichtbaar: true,
+      element: (
+        <ScrollReveal>
+          <KostenKader
+            titel="Facturen"
+            ankerId="facturen"
+            stapTip={{
+              nummer: 3,
+              titel: "Voeg je facturen toe",
+              uitleg: "Elektriciteit, mazout/gas, water, internet — alles wat per factuur binnenkomt.",
+              voorbeeld: "Elektriciteit — €120,00",
+            }}
+            items={data.facturen}
+            onZetBetaald={acties.zetFactuurBetaald}
+            onToevoegen={(d) => acties.voegFactuurToe(d, huidigeMaand)}
+            onVerwijderen={acties.verwijderFactuur}
+          />
+        </ScrollReveal>
+      ),
+    },
+    "kosten-extra": {
+      zichtbaar: true,
+      element: (
+        <ScrollReveal>
+          <ExtraUitgavenKader
+            items={extraUitgaven}
+            onToevoegen={(d) => acties.voegExtraUitgaveToe(d, huidigeMaand)}
+            onVerwijderen={acties.verwijderExtraUitgave}
+            onZetGeskipt={acties.zetExtraUitgaveGeskipt}
+            highlightId={nieuwItemId}
+          />
+        </ScrollReveal>
       ),
     },
     "wat-als": {
@@ -334,33 +367,36 @@ export function DashboardClient({
         </ScrollReveal>
       ),
     },
-    "doelen-investeringen": {
+    doelen: {
       zichtbaar: true,
       element: (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
-          <ScrollReveal vertraging={0}>
-            <DoelenSectie
-              doelen={data.doelen}
-              bijdragen={data.doelBijdragen}
-              huidigeMaand={huidigeMaand}
-              onToevoegen={acties.voegDoelToe}
-              onVerwijderen={acties.verwijderDoel}
-              onPauzeren={acties.zetDoelGepauzeerd}
-              onHerschikken={acties.herschikDoelen}
-              onBijdrageToevoegen={acties.voegDoelBijdrageToe}
-            />
-          </ScrollReveal>
-          <ScrollReveal vertraging={80}>
-            <InvesteringenSectie
-              investeringen={data.investeringen}
-              transacties={data.investeringTransacties}
-              onInvesteringToevoegen={acties.voegInvesteringToe}
-              onTransactieToevoegen={acties.voegInvesteringTransactieToe}
-              onHernoemen={acties.hernoemInvestering}
-              onVerwijderen={acties.verwijderInvestering}
-            />
-          </ScrollReveal>
-        </div>
+        <ScrollReveal>
+          <DoelenSectie
+            doelen={data.doelen}
+            bijdragen={data.doelBijdragen}
+            huidigeMaand={huidigeMaand}
+            onToevoegen={acties.voegDoelToe}
+            onVerwijderen={acties.verwijderDoel}
+            onPauzeren={acties.zetDoelGepauzeerd}
+            onHerschikken={acties.herschikDoelen}
+            onBijdrageToevoegen={acties.voegDoelBijdrageToe}
+          />
+        </ScrollReveal>
+      ),
+    },
+    investeringen: {
+      zichtbaar: true,
+      element: (
+        <ScrollReveal>
+          <InvesteringenSectie
+            investeringen={data.investeringen}
+            transacties={data.investeringTransacties}
+            onInvesteringToevoegen={acties.voegInvesteringToe}
+            onTransactieToevoegen={acties.voegInvesteringTransactieToe}
+            onHernoemen={acties.hernoemInvestering}
+            onVerwijderen={acties.verwijderInvestering}
+          />
+        </ScrollReveal>
       ),
     },
     voorstellen: {
@@ -393,6 +429,16 @@ export function DashboardClient({
           toonOverzicht={toonOverzicht}
         />
       </ScrollReveal>
+
+      {magSlepen && volgordeAangepast && (
+        <button
+          type="button"
+          onClick={herstelStandaardVolgorde}
+          className="knop-secundair !min-h-[36px] !px-3 !text-xs gap-1.5"
+        >
+          <RotateCcw size={14} strokeWidth={2.25} /> Terug naar standaard weergave
+        </button>
+      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={opDragEinde}>
         <SortableContext items={zichtbareVolgorde} strategy={verticalListSortingStrategy}>

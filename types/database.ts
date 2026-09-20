@@ -64,6 +64,21 @@ export interface Inkomen extends HuishoudenRij {
   updated_at: string;
 }
 
+/**
+ * Optioneel, enkel bij frequentie 'wekelijks': een apart bedrag per
+ * week (1-4) i.p.v. één vast bedrag × 4 — voor inkomen dat elke week
+ * anders is. Zolang hier niets voor bestaat, blijft de gewone
+ * bedrag × 4-vuistregel gelden (zie lib/calculations/inkomen.ts).
+ */
+export interface InkomenWeekBedrag extends HuishoudenRij {
+  id: string;
+  inkomen_id: string;
+  week_nummer: number;
+  bedrag: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ExtraInkomen extends HuishoudenRij {
   id: string;
   label: string;

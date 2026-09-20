@@ -26,6 +26,7 @@ import {
   verwijderInvestering,
   voegInkomenToe,
   verwijderInkomen,
+  zetInkomenWeekBedragen,
   registreerNieuweMaand,
   zetDashboardVolgorde,
 } from "../actions";
@@ -54,6 +55,7 @@ const ECHTE_ACTIES: DashboardActies = {
   verwijderInvestering,
   voegInkomenToe,
   verwijderInkomen,
+  zetInkomenWeekBedragen,
   wisData: wisHouseholdData,
   zetDashboardVolgorde,
 };

@@ -198,6 +198,25 @@ export function maakGastActies(huidigeMaand: string, zetData: ZetData): Dashboar
     verwijderInkomen: (id) =>
       pas((data) => metMaand(data, huidigeMaand, (m) => ({ ...m, inkomen: m.inkomen.filter((i) => i.id !== id) }))),
 
+    zetInkomenWeekBedragen: (inkomenId, weekBedragen) =>
+      pas((data) =>
+        metMaand(data, huidigeMaand, (m) => ({
+          ...m,
+          inkomenWeekBedragen: [
+            ...m.inkomenWeekBedragen.filter((w) => w.inkomen_id !== inkomenId),
+            ...weekBedragen.map((w) => ({
+              id: nieuwId(),
+              inkomen_id: inkomenId,
+              week_nummer: w.week_nummer,
+              bedrag: w.bedrag,
+              created_at: nu(),
+              updated_at: nu(),
+              ...GAST_METADATA,
+            })),
+          ],
+        }))
+      ),
+
     wisData: () =>
       // dashboardVolgorde is een schikvoorkeur, geen budgetdata — blijft
       // bewust behouden bij het wissen van alle gezinsfinanciën.
@@ -234,11 +253,16 @@ export function maakGastRegistreerMaand(zetData: ZetData): RegistreerMaandActie 
             ? {
                 inkomen: van.inkomen.map((i) => ({ ...i, id: nieuwId(), maand: nieuweMaand })),
                 extraInkomen: [],
+                // Weekbedragen zijn per definitie week-specifiek (dit is
+                // wat er die specifieke week écht binnenkwam) — net als
+                // extraInkomen bewust niet meegekopieerd naar een nieuwe
+                // maand, die begint met de gewone bedrag × 4-vuistregel.
+                inkomenWeekBedragen: [],
                 vasteKosten: van.vasteKosten.map((k) => ({ ...k, id: nieuwId(), maand: nieuweMaand, betaald: false })),
                 facturen: van.facturen.map((f) => ({ ...f, id: nieuwId(), maand: nieuweMaand, betaald: false })),
                 extraUitgaven: van.extraUitgaven.map((u) => ({ ...u, id: nieuwId(), maand: nieuweMaand, geskipt: false })),
               }
-            : { inkomen: [], extraInkomen: [], vasteKosten: [], facturen: [], extraUitgaven: [] },
+            : { inkomen: [], extraInkomen: [], inkomenWeekBedragen: [], vasteKosten: [], facturen: [], extraUitgaven: [] },
         },
       };
       schrijfGastData(volgende);

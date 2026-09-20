@@ -52,6 +52,7 @@ export default function GastDashboardPagina({ params }: { params: { maand: strin
   const data: DashboardData = {
     inkomen: maandData.inkomen,
     extraInkomen: maandData.extraInkomen,
+    inkomenWeekBedragen: maandData.inkomenWeekBedragen,
     vasteKosten: maandData.vasteKosten,
     facturen: maandData.facturen,
     extraUitgaven: maandData.extraUitgaven,

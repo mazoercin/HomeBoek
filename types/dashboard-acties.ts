@@ -69,6 +69,12 @@ export interface DashboardActies {
     maand: string
   ) => Resultaat;
   verwijderInkomen: (id: string) => Resultaat;
+  /**
+   * Vervangt de volledige set weekbedragen (1-4) van één wekelijkse
+   * inkomenspost in één keer — een lege lijst wist ze allemaal (terug
+   * naar de gewone bedrag × 4-vuistregel).
+   */
+  zetInkomenWeekBedragen: (inkomenId: string, weekBedragen: { week_nummer: number; bedrag: number }[]) => Resultaat;
   /** Wist alle data (alle maanden, doelen, investeringen) — enkel bereikbaar voor owner/gast. */
   wisData: () => Resultaat;
   /** Bewaart de nieuwe volgorde van de sleepbare dashboard-kaarten — gedeeld door het hele huishouden. */

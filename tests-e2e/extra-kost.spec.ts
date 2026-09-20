@@ -24,10 +24,10 @@ test.describe("Extra kost — snel toevoegen via de floating knop", () => {
     await page.getByRole("button", { name: "Extra kost toevoegen" }).click();
     const dialoog = page.getByRole("dialog", { name: "Extra kost toevoegen" });
     await expect(dialoog).toBeVisible();
-    await expect(page.getByLabel("Bedrag (€)")).toBeFocused();
+    await expect(dialoog.getByLabel("Bedrag (€)")).toBeFocused();
 
-    await page.getByLabel("Bedrag (€)").fill("8,50");
-    await page.getByLabel("Omschrijving").fill("Boodschappen");
+    await dialoog.getByLabel("Bedrag (€)").fill("8,50");
+    await dialoog.getByLabel("Omschrijving").fill("Boodschappen");
     await dialoog.getByRole("button", { name: "Toevoegen" }).click();
 
     await expect(page.getByTestId("extra-kost-toast")).toBeVisible();
@@ -56,8 +56,8 @@ test.describe("Extra kost — snel toevoegen via de floating knop", () => {
 
     await page.getByRole("button", { name: "Extra kost toevoegen" }).click();
     const dialoog = page.getByRole("dialog", { name: "Extra kost toevoegen" });
-    await page.getByLabel("Bedrag (€)").fill("15");
-    await page.getByLabel("Omschrijving").fill("Tijdelijk item");
+    await dialoog.getByLabel("Bedrag (€)").fill("15");
+    await dialoog.getByLabel("Omschrijving").fill("Tijdelijk item");
     await dialoog.getByRole("button", { name: "Toevoegen" }).click();
 
     await expect(page.getByTestId("extra-uitgaven-lijst")).toContainText("Tijdelijk item");
@@ -78,14 +78,14 @@ test.describe("Extra kost — snel toevoegen via de floating knop", () => {
     await page.getByRole("button", { name: "Extra kost toevoegen" }).click();
     const dialoog = page.getByRole("dialog", { name: "Extra kost toevoegen" });
 
-    await page.getByLabel("Bedrag (€)").fill("-5");
-    await page.getByLabel("Omschrijving").fill("Ongeldig");
+    await dialoog.getByLabel("Bedrag (€)").fill("-5");
+    await dialoog.getByLabel("Omschrijving").fill("Ongeldig");
     await dialoog.getByRole("button", { name: "Toevoegen" }).click();
 
     await expect(dialoog.getByRole("alert")).toContainText("geldig bedrag");
     expect(await page.getByTestId("extra-uitgaven-lijst").locator("li").count()).toBe(aantalItemsVoor);
     // Het ingevoerde bedrag blijft staan zodat je het meteen kan corrigeren.
-    await expect(page.getByLabel("Bedrag (€)")).toHaveValue("-5");
+    await expect(dialoog.getByLabel("Bedrag (€)")).toHaveValue("-5");
   });
 
   test("toetsenbordbediening: sneltoets N opent het scherm, Escape sluit het, Tab blijft binnen de dialoog", async ({
@@ -103,7 +103,7 @@ test.describe("Extra kost — snel toevoegen via de floating knop", () => {
     await page.getByRole("button", { name: "Extra kost toevoegen" }).click();
     await expect(dialoog).toBeVisible();
     // Shift+Tab vanaf het eerste focusbare element moet naar het laatste springen (focus trap), niet uit de dialoog.
-    await page.getByLabel("Bedrag (€)").focus();
+    await dialoog.getByLabel("Bedrag (€)").focus();
     await page.keyboard.press("Shift+Tab");
     const actief = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
     expect(actief).not.toBeNull();
