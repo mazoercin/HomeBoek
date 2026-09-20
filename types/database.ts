@@ -25,17 +25,6 @@ export interface HouseholdLid {
   invited_by: string | null;
 }
 
-export interface ActiviteitLogRegel {
-  id: string;
-  household_id: string;
-  actor_id: string | null;
-  action: string;
-  entity: string;
-  entity_id: string | null;
-  summary: string;
-  created_at: string;
-}
-
 /** Gemeenschappelijke metadata-kolommen die elke budgettabel nu draagt (server-side via trigger gezet). */
 interface HuishoudenRij {
   household_id: string;

@@ -1,6 +1,6 @@
 import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
-import type { HouseholdLid, ActiviteitLogRegel, Profiel } from "@/types/database";
+import type { HouseholdLid, Profiel } from "@/types/database";
 
 export interface HouseholdLidMetProfiel extends HouseholdLid {
   profiel: Pick<Profiel, "gebruikersnaam" | "email" | "avatar_color"> | null;
@@ -8,24 +8,15 @@ export interface HouseholdLidMetProfiel extends HouseholdLid {
 
 export interface HouseholdOverzicht {
   leden: HouseholdLidMetProfiel[];
-  recenteActiviteit: ActiviteitLogRegel[];
   fout: boolean;
 }
 
-/** Alle data voor de "Gezin"-pagina: ledenlijst, recente activiteit. */
+/** Alle data voor de "Gezin"-pagina: ledenlijst. */
 export async function haalHouseholdOverzicht(householdId: string): Promise<HouseholdOverzicht> {
   const supabase = maakServerClient();
 
   try {
-    const [ledenRes, activiteitRes] = await Promise.all([
-      supabase.from("household_members").select("*").eq("household_id", householdId).order("joined_at"),
-      supabase
-        .from("activity_log")
-        .select("*")
-        .eq("household_id", householdId)
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+    const ledenRes = await supabase.from("household_members").select("*").eq("household_id", householdId).order("joined_at");
 
     // Losse query i.p.v. een PostgREST-embed ("profiel:profiles(...)"):
     // household_members.user_id en profiles.user_id refereren allebei
@@ -40,14 +31,14 @@ export async function haalHouseholdOverzicht(householdId: string): Promise<House
         ? await supabase.from("profiles").select("user_id, gebruikersnaam, email, avatar_color").in("user_id", gebruikerIds)
         : { data: [] as Pick<Profiel, "user_id" | "gebruikersnaam" | "email" | "avatar_color">[], error: null };
 
-    const eersteFout = [ledenRes, activiteitRes, profielenRes].find((r) => r.error);
+    const eersteFout = [ledenRes, profielenRes].find((r) => r.error);
     if (eersteFout?.error) {
       logger.error({
         code: "DB_001",
         message: "Kon huishoudoverzicht niet ophalen",
         context: { householdId, error: eersteFout.error.message },
       });
-      return { leden: [], recenteActiviteit: [], fout: true };
+      return { leden: [], fout: true };
     }
 
     const profielPerGebruiker = new Map((profielenRes.data ?? []).map((p) => [p.user_id, p]));
@@ -56,17 +47,13 @@ export async function haalHouseholdOverzicht(householdId: string): Promise<House
       profiel: profielPerGebruiker.get(lid.user_id as string) ?? null,
     }));
 
-    return {
-      leden,
-      recenteActiviteit: (activiteitRes.data ?? []) as ActiviteitLogRegel[],
-      fout: false,
-    };
+    return { leden, fout: false };
   } catch (error) {
     logger.error({
       code: "DB_001",
       message: "Onverwachte fout bij ophalen huishoudoverzicht",
       context: { householdId, error: error instanceof Error ? error.message : String(error) },
     });
-    return { leden: [], recenteActiviteit: [], fout: true };
+    return { leden: [], fout: true };
   }
 }

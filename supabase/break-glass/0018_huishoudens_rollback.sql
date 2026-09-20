@@ -1,4 +1,31 @@
 -- ============================================================
+-- ⚠️ BREAK-GLASS SCRIPT — NIET onderdeel van de gewone migratieketen.
+--
+-- Dit bestand stond eerder in supabase/migrations/ en droeg per
+-- ongeluk hetzelfde volgnummer (0018) als de migratie die het
+-- terugdraait — bij het handmatig doorlopen van de migraties in
+-- volgorde kon dit dus per vergissing meegedraaid worden. Verplaatst
+-- naar deze map zodat dat niet meer kan, en zodat een eventuele
+-- toekomstige overstap naar de Supabase CLI (die de hele
+-- migrations-map automatisch uitvoert) dit bestand nooit oppikt.
+--
+-- Ook inhoudelijk sinds de verplaatsing verouderd, gebruik dus enkel
+-- als uitgangspunt, niet als kant-en-klaar script:
+--   - Rollt 0018_huishoudens.sql terug en is enkel veilig zolang er nog
+--     maar ÉÉN huishouden bestaat (zie de originele waarschuwing
+--     hieronder) — ondertussen zijn er in productie mogelijk al meer.
+--   - Na migratie 0024_opruimen.sql bestaat de tabel `instellingen`
+--     niet meer: de regels hieronder die daarnaar verwijzen
+--     (`alter table instellingen ...`) zullen meteen falen.
+--   - Verwijst niet naar `verplaats_doel_prioriteit`/
+--     `bereken_reeds_gespaard_voor_doel` (die twee waren toch al dood
+--     vóór 0018, dus dat is geen extra afwijking).
+--
+-- Kortom: lees en pas dit script grondig aan voor je het ooit draait,
+-- vertrouw niet blind op de tekst hieronder.
+-- ============================================================
+
+-- ============================================================
 -- Rollback voor 0018_huishoudens.sql.
 -- Enkel veilig zolang er nog maar ÉÉN huishouden bestaat (de
 -- automatisch aangemaakte "Ons gezin" uit de migratie zelf) — als er
