@@ -33,34 +33,6 @@ test.describe("Dashboard-kaders slepen", () => {
     ]);
   });
 
-  test("'Terug naar standaard weergave' verschijnt pas na een wijziging, en herstelt de volgorde", async ({ page }) => {
-    await gaNaarGastDashboard(page);
-    const herstelKnop = page.getByRole("button", { name: "Terug naar standaard weergave" });
-    await expect(herstelKnop).not.toBeVisible();
-
-    const handvat = page.getByTestId("dashboard-blok-samenvatting-handvat");
-    const doel = page.getByTestId("dashboard-blok-grafieken");
-    const handvatBox = await handvat.boundingBox();
-    const doelBox = await doel.boundingBox();
-    if (!handvatBox || !doelBox) throw new Error("Kon posities niet bepalen.");
-
-    await page.mouse.move(handvatBox.x + handvatBox.width / 2, handvatBox.y + handvatBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(handvatBox.x + handvatBox.width / 2, handvatBox.y + 15, { steps: 5 });
-    await page.mouse.move(doelBox.x + doelBox.width / 2, doelBox.y + doelBox.height / 2, { steps: 12 });
-    await page.mouse.up();
-
-    await expect(herstelKnop).toBeVisible();
-    await herstelKnop.click();
-
-    await expect(async () => {
-      const volgorde = await huidigeVolgorde(page);
-      expect(volgorde[0]).toBe("samenvatting");
-      expect(volgorde[1]).toBe("grafieken");
-    }).toPass({ timeout: 3000 });
-    await expect(herstelKnop).not.toBeVisible();
-  });
-
   test("een kader verslepen wijzigt de volgorde en blijft na herlaad behouden", async ({ page }) => {
     await gaNaarGastDashboard(page);
 

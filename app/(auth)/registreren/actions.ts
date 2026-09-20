@@ -92,6 +92,16 @@ export async function registreer(_prevState: RegistreerState, formData: FormData
     return { ...BEGIN_STATE, fout: vertaalFout(error?.message ?? "") };
   }
 
+  // Supabase's signUp() geeft bij een reeds bestaand, al-bevestigd
+  // e-mailadres GEEN foutmelding terug (anti-enumeratie-bescherming) —
+  // het levert wel "succesvol" een user-object terug, maar dan met een
+  // lege identities-array. Zonder deze check leek dat hier op een
+  // geslaagde registratie, tot het profiel opslaan strandde op de
+  // bestaande rij (verwarrende "profiel opslaan mislukte"-melding).
+  if (data.user.identities && data.user.identities.length === 0) {
+    return { ...BEGIN_STATE, fout: "Er bestaat al een account met dit e-mailadres." };
+  }
+
   const profiel = await maakGebruikersProfiel({ id: data.user.id, email: emailInvoer, gebruikersnaam });
   if (!profiel) {
     return { ...BEGIN_STATE, fout: "Account aangemaakt, maar profiel opslaan mislukte. Neem contact op." };

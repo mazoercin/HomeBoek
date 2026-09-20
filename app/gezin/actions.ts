@@ -12,6 +12,7 @@ import { haalIpHash, magDoor, registreerPoging } from "@/lib/auth/rate-limit";
 import { haalSiteUrl } from "@/lib/auth/site-url";
 import { verwijderSessieCookie } from "@/lib/auth/session";
 import { bepaalVerwijderScope } from "@/lib/auth/account-verwijderen";
+import { isAdminEmail } from "@/lib/auth/admin";
 import { bouwHuisbalansExport, exportBestandsnaam } from "@/lib/export/huisbalans-export";
 import { logger } from "@/lib/logger.server";
 import type { HouseholdRol, Categorie, InkomenBron, InkomenFrequentie } from "@/types/database";
@@ -244,6 +245,11 @@ export async function verwijderLid(userId: string): Promise<{ gelukt: boolean; f
     .maybeSingle();
   if (!lid) {
     return { gelukt: false, foutmelding: "Dit account hoort niet bij jouw huishouden." };
+  }
+
+  const doelProfiel = await haalGebruikersProfiel(userId);
+  if (isAdminEmail(doelProfiel?.email)) {
+    return { gelukt: false, foutmelding: "Dit account kan niet verwijderd worden." };
   }
 
   const serviceClient = maakServiceClient();
@@ -531,6 +537,9 @@ export async function verwijderMijnAccount(wachtwoord: string): Promise<Verwijde
   const profiel = await haalGebruikersProfiel(sessie.gebruikerId);
   if (!profiel) {
     return { gelukt: false, foutmelding: "Kon je account niet vinden. Probeer opnieuw in te loggen." };
+  }
+  if (isAdminEmail(profiel.email)) {
+    return { gelukt: false, foutmelding: "Dit account kan niet verwijderd worden." };
   }
 
   const supabase = maakServerClient();

@@ -24,6 +24,18 @@ const BETAALMETHODEN: { waarde: ExtraKostBetaalmethode; label: string }[] = [
   { waarde: "maaltijdcheque", label: "Maaltijdcheque" },
 ];
 
+/**
+ * Vast tekstblok onder de titel (i.p.v. conditioneel onder de knoppen):
+ * die tekst enkel tonen/verbergen bij het wisselen van betaalmethode liet
+ * de rest van het formulier (en de "Toevoegen"-knop) naar boven/onder
+ * springen. Altijd gemonteerd, enkel de inhoud wisselt — geen reflow.
+ */
+const BETAALMETHODE_UITLEG: Record<ExtraKostBetaalmethode, string> = {
+  bankkaart: "Gewoon van je rekening betaald — telt meteen mee als uitgegeven geld.",
+  visa: "Komt bij Facturen te staan — dat bedrag moet je nog terugbetalen aan je kaart.",
+  maaltijdcheque: "Gaat af van je maaltijdcheques-budget, niet van je geld.",
+};
+
 interface Props {
   open: boolean;
   onSluiten: () => void;
@@ -124,7 +136,11 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    // 100dvh i.p.v. louter `inset-0` (dat volgt de "grote", niet per se
+    // zichtbare viewport op mobiel — zelfde reden als ExtraKostFAB/Toast) —
+    // anders kan `items-end` het paneel net onder de echt zichtbare rand
+    // plaatsen.
+    <div className="fixed top-0 left-0 w-full h-screen z-50 flex items-end sm:items-center justify-center" style={{ height: "100dvh" }}>
       {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-fade-in motion-reduce:animate-none"
@@ -140,15 +156,18 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
         className="relative z-10 w-full sm:max-w-sm bg-kaart rounded-t-2xl sm:rounded-2xl shadow-card-hover
           max-h-[85vh] overflow-y-auto animate-fade-in-up motion-reduce:animate-none"
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-1">
-          <h2 id="extra-kost-titel" className="text-lg font-bold tracking-tight">
-            Extra kost toevoegen
-          </h2>
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-1">
+          <div>
+            <h2 id="extra-kost-titel" className="text-lg font-bold tracking-tight">
+              Extra kost toevoegen
+            </h2>
+            <p className="text-xs text-tekst-secundair mt-1">{BETAALMETHODE_UITLEG[betaalmethode]}</p>
+          </div>
           <button
             type="button"
             onClick={onSluiten}
             aria-label="Sluiten"
-            className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-tekst-primair hover:bg-slate-100 transition"
+            className="shrink-0 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-tekst-primair hover:bg-slate-100 transition"
           >
             <X size={18} strokeWidth={2.25} />
           </button>
@@ -214,14 +233,6 @@ export function ExtraKostSheet({ open, onSluiten, onVoegToe }: Props) {
                 </button>
               ))}
             </div>
-            {betaalmethode === "visa" && (
-              <p className="text-xs text-tekst-secundair mt-1.5">
-                Komt bij Facturen te staan — dat bedrag moet je nog terugbetalen aan je kaart.
-              </p>
-            )}
-            {betaalmethode === "maaltijdcheque" && (
-              <p className="text-xs text-tekst-secundair mt-1.5">Gaat af van je maaltijdcheques-budget, niet van je geld.</p>
-            )}
           </div>
 
           {fout && (

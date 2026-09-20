@@ -22,6 +22,7 @@ import {
   verwijderMijnAccount,
 } from "@/app/gezin/actions";
 import { bepaalVerwijderScope } from "@/lib/auth/account-verwijderen";
+import { isAdminEmail } from "@/lib/auth/admin";
 import { uitloggen } from "../logout-action";
 
 export const dynamic = "force-dynamic";
@@ -76,12 +77,15 @@ export default async function InstellingenPagina() {
         onWachtwoordResetten={resetLidWachtwoord}
       />
 
-      <JouwGegevensKaart
-        scope={verwijderScope}
-        gezinsledenNamen={gezinsledenNamen}
-        onDownloaden={downloadMijnGegevens}
-        onVerwijderen={verwijderMijnAccount}
-      />
+      {/* Het admin-account (zie lib/auth/admin.ts) kan nooit verwijderd worden — dan hoort hier ook geen knop die dat suggereert. */}
+      {!isAdminEmail(eigenEmail) && (
+        <JouwGegevensKaart
+          scope={verwijderScope}
+          gezinsledenNamen={gezinsledenNamen}
+          onDownloaden={downloadMijnGegevens}
+          onVerwijderen={verwijderMijnAccount}
+        />
+      )}
 
       {isOwner && <LogViewer regels={regels} onWissen={wisLogboek} />}
     </div>

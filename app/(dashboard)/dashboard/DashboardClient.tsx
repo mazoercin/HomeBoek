@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { PiggyBank } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { RotateCcw } from "lucide-react";
 import type { DashboardData } from "@/lib/data/dashboard";
 import {
   berekenTotaalInkomen,
@@ -128,8 +128,12 @@ export function DashboardClient({
   // Next.js onthoudt soms de scrollpositie van een eerder bezoek aan
   // dezelfde URL. Bij het wisselen van maand moet je altijd bovenaan
   // dat nieuwe dashboard landen, dus forceren we dat expliciet i.p.v.
-  // te vertrouwen op scroll-restoration.
+  // te vertrouwen op scroll-restoration. Staat er een hash in de URL
+  // (bv. binnengekomen via de navigatiebalk-link naar #inkomen), dan
+  // laten we dit met rust — anders wint deze reset het van de
+  // automatische scroll naar dat anker.
   useEffect(() => {
+    if (window.location.hash) return;
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [huidigeMaand]);
 
@@ -270,15 +274,6 @@ export function DashboardClient({
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } })
   );
-
-  const volgordeAangepast = volgordeIds.some((id, i) => id !== STANDAARD_VOLGORDE[i]);
-
-  function herstelStandaardVolgorde() {
-    setVolgordeIds(STANDAARD_VOLGORDE);
-    startVolgordeTransition(() => {
-      void acties.zetDashboardVolgorde(STANDAARD_VOLGORDE);
-    });
-  }
 
   function opDragEinde(event: DragEndEvent) {
     const { active, over } = event;
@@ -470,8 +465,10 @@ export function DashboardClient({
   return (
     <div className="space-y-6 lg:space-y-8">
       <div>
-        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">
-          {householdNaam} <span className="text-primair">— Gezinsfinanciën</span>
+        <h1 className="flex items-center gap-2.5 text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">
+          {householdNaam}
+          <PiggyBank size={26} className="text-primair shrink-0" strokeWidth={2.25} aria-hidden />
+          <span className="text-primair">Gezinsfinanciën</span>
         </h1>
         <p className="text-sm text-tekst-secundair mt-0.5">Alles overzichtelijk op één plek.</p>
       </div>
@@ -485,16 +482,6 @@ export function DashboardClient({
           toonOverzicht={toonOverzicht}
         />
       </ScrollReveal>
-
-      {magSlepen && volgordeAangepast && (
-        <button
-          type="button"
-          onClick={herstelStandaardVolgorde}
-          className="knop-secundair !min-h-[36px] !px-3 !text-xs gap-1.5"
-        >
-          <RotateCcw size={14} strokeWidth={2.25} /> Terug naar standaard weergave
-        </button>
-      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={opDragEinde}>
         <SortableContext items={zichtbareVolgorde} strategy={rectSortingStrategy}>

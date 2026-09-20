@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, CalendarDays, Users, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, CalendarDays, Users, Menu, X, LogOut, ShieldCheck } from "lucide-react";
 import type { HouseholdRol } from "@/types/database";
 import { Logo } from "@/components/ui/Logo";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
@@ -27,7 +27,7 @@ const MAAND_IN_PAD = /^\/dashboard\/(\d{4}-\d{2})/;
  * onderaan), en sluit meteen weer zodra je een link aantikt — de
  * pagina scrollt daarna vloeiend naar het juiste kader.
  */
-export function NavigatieBalk({ rol }: { rol: HouseholdRol }) {
+export function NavigatieBalk({ rol, isAdmin = false }: { rol: HouseholdRol; isAdmin?: boolean }) {
   const [gescrold, setGescrold] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -55,6 +55,8 @@ export function NavigatieBalk({ rol }: { rol: HouseholdRol }) {
     // `rol` bepaalt binnen de Gezin-pagina zelf welke acties zichtbaar
     // zijn (rol wijzigen, uitnodigen, ...) — de link is voor elk lid nuttig.
     { href: "/instellingen", label: "Gezin", icoon: Users, pad: "" },
+    // Enkel zichtbaar voor het vaste admin-account (zie lib/auth/admin.ts).
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icoon: ShieldCheck, pad: "" }] : []),
   ];
 
   return (
