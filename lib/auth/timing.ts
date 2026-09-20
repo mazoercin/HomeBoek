@@ -1,5 +1,5 @@
 /** Standaard ondergrens voor de responstijd van een auth-actie die niet mag verraden of een account bestaat. */
-export const STANDAARD_MINIMALE_RESPONSTIJD_MS = 400;
+const STANDAARD_MINIMALE_RESPONSTIJD_MS = 400;
 
 /**
  * Wacht tot minstens `minimumMs` verstreken is sinds `gestartOp`, zodat
