@@ -32,8 +32,8 @@ export function AdminGebruikersTabel({ gebruikers }: { gebruikers: AdminGebruike
               <td className="px-4 py-3 text-tekst-secundair whitespace-nowrap">
                 {g.email ?? <span className="italic">Geen (intern adres)</span>}
               </td>
-              <td className="px-4 py-3 text-tekst-secundair whitespace-nowrap">{g.huishoudenNaam ?? "—"}</td>
-              <td className="px-4 py-3 text-tekst-secundair whitespace-nowrap">{g.rol ? ROL_LABEL[g.rol] : "—"}</td>
+              <td className="px-4 py-3 text-tekst-secundair whitespace-nowrap">{g.huishoudenNaam ?? "n.v.t."}</td>
+              <td className="px-4 py-3 text-tekst-secundair whitespace-nowrap">{g.rol ? ROL_LABEL[g.rol] : "n.v.t."}</td>
               <td className="px-4 py-3 text-tekst-secundair whitespace-nowrap">{formatteerDatum(g.aangemaaktOp)}</td>
             </tr>
           ))}

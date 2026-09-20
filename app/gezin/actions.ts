@@ -86,7 +86,7 @@ export async function maakGezinsAccount(input: {
     logger.error({
       code: "DB_001",
       message: "Kon gezinsaccount niet aanmaken",
-      context: { householdId: context.householdId, error: createError?.message },
+      context: { gebruikersnaam: context.gebruikersnaam, householdId: context.householdId, error: createError?.message },
     });
     const bestaatAl = createError?.message?.toLowerCase().includes("already been registered");
     return {
@@ -113,7 +113,7 @@ export async function maakGezinsAccount(input: {
     logger.error({
       code: "DB_001",
       message: "Kon nieuw lid niet aan huishouden koppelen",
-      context: { householdId: context.householdId, error: lidError.message },
+      context: { gebruikersnaam: context.gebruikersnaam, householdId: context.householdId, error: lidError.message },
     });
     return { gelukt: false, foutmelding: "Kon dit account niet aan het huishouden koppelen." };
   }
@@ -154,7 +154,11 @@ export async function resetLidWachtwoord(
   await registreerPoging("aanmaken", ipHash, context.gebruikerId, !error);
 
   if (error) {
-    logger.error({ code: "DB_001", message: "Kon wachtwoord niet resetten", context: { userId, error: error.message } });
+    logger.error({
+      code: "DB_001",
+      message: "Kon wachtwoord niet resetten",
+      context: { gebruikersnaam: context.gebruikersnaam, userId, error: error.message },
+    });
     return { gelukt: false, foutmelding: "Kon het wachtwoord niet wijzigen." };
   }
 
@@ -171,7 +175,7 @@ export async function resetLidWachtwoord(
  * app/auth/callback/route.ts.
  */
 export async function zetEigenEmail(nieuweEmail: string): Promise<{ gelukt: boolean; foutmelding?: string }> {
-  await vereisHouseholdRol("owner");
+  const context = await vereisHouseholdRol("owner");
 
   const email = nieuweEmail.trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) {
@@ -190,7 +194,11 @@ export async function zetEigenEmail(nieuweEmail: string): Promise<{ gelukt: bool
   );
 
   if (error) {
-    logger.error({ code: "AUTH_001", message: "Kon e-mailadres niet wijzigen", context: { error: error.message } });
+    logger.error({
+      code: "AUTH_001",
+      message: "Kon e-mailadres niet wijzigen",
+      context: { gebruikersnaam: context.gebruikersnaam, error: error.message },
+    });
     return { gelukt: false, foutmelding: "Kon het e-mailadres niet wijzigen." };
   }
 
@@ -213,7 +221,11 @@ export async function wijzigLidRol(userId: string, rol: HouseholdRol): Promise<{
     .eq("user_id", userId);
 
   if (error) {
-    logger.error({ code: "DB_001", message: "Kon rol niet wijzigen", context: { userId, rol, error: error.message } });
+    logger.error({
+      code: "DB_001",
+      message: "Kon rol niet wijzigen",
+      context: { gebruikersnaam: context.gebruikersnaam, userId, rol, error: error.message },
+    });
     return { gelukt: false, foutmelding: "Kon de rol niet wijzigen." };
   }
 
@@ -256,7 +268,11 @@ export async function verwijderLid(userId: string): Promise<{ gelukt: boolean; f
   const { error } = await serviceClient.auth.admin.deleteUser(userId);
 
   if (error) {
-    logger.error({ code: "AUTH_001", message: "Kon lid niet verwijderen", context: { error: error.message } });
+    logger.error({
+      code: "AUTH_001",
+      message: "Kon lid niet verwijderen",
+      context: { gebruikersnaam: context.gebruikersnaam, error: error.message },
+    });
     return { gelukt: false, foutmelding: "Kon dit lid niet verwijderen." };
   }
 
@@ -297,7 +313,7 @@ export async function draagEigenaarschapOver(nieuweOwnerId: string): Promise<{ g
     logger.error({
       code: "DB_001",
       message: "Kon eigenaarschap niet overdragen",
-      context: { nieuweOwnerId, error: error.message },
+      context: { gebruikersnaam: context.gebruikersnaam, nieuweOwnerId, error: error.message },
     });
     return { gelukt: false, foutmelding: "Kon het eigenaarschap niet overdragen." };
   }
@@ -318,7 +334,11 @@ export async function zetHouseholdInstellingen(naam: string, currency: string): 
     .eq("id", context.householdId);
 
   if (error) {
-    logger.error({ code: "DB_001", message: "Kon huishoudinstellingen niet opslaan", context: { error: error.message } });
+    logger.error({
+      code: "DB_001",
+      message: "Kon huishoudinstellingen niet opslaan",
+      context: { gebruikersnaam: context.gebruikersnaam, error: error.message },
+    });
     return { gelukt: false, foutmelding: "Kon niet opslaan." };
   }
 
@@ -335,7 +355,11 @@ export async function wisHouseholdData(): Promise<{ gelukt: boolean; foutmelding
   const { error } = await supabase.rpc("wis_household_data", { p_household_id: context.householdId });
 
   if (error) {
-    logger.error({ code: "DB_001", message: "Kon huishouddata niet wissen", context: { error: error.message } });
+    logger.error({
+      code: "DB_001",
+      message: "Kon huishouddata niet wissen",
+      context: { gebruikersnaam: context.gebruikersnaam, error: error.message },
+    });
     return { gelukt: false, foutmelding: "Kon de data niet wissen, probeer opnieuw." };
   }
 
@@ -432,7 +456,7 @@ export async function downloadMijnGegevens(): Promise<DownloadResultaat> {
     logger.error({
       code: "DB_001",
       message: "Kon basisgegevens voor export niet ophalen",
-      context: { error: huishoudenRes.error?.message ?? profielRes.error?.message },
+      context: { gebruikersnaam: context.gebruikersnaam, error: huishoudenRes.error?.message ?? profielRes.error?.message },
     });
     return { gelukt: false, foutmelding: "Kon je gegevens niet ophalen. Probeer opnieuw." };
   }
@@ -759,7 +783,11 @@ export async function importeerGastData(payload: GastImportPayload): Promise<{ g
     logger.error({
       code: "DB_001",
       message: "Kon gast-data niet importeren naar nieuw huishouden",
-      context: { householdId: context.householdId, error: error instanceof Error ? error.message : String(error) },
+      context: {
+        gebruikersnaam: context.gebruikersnaam,
+        householdId: context.householdId,
+        error: error instanceof Error ? error.message : String(error),
+      },
     });
     return { gelukt: false, foutmelding: "Kon je gegevens niet overzetten." };
   }

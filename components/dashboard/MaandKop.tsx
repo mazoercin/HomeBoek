@@ -109,7 +109,7 @@ export function MaandKop({
           {basisPad !== "/gast" && (
             <button
               type="button"
-              title="Ververs — haal de nieuwste gegevens op (bv. na een wijziging door een ander gezinslid)"
+              title="Ververs: haal de nieuwste gegevens op (bv. na een wijziging door een ander gezinslid)"
               aria-label="Ververs dashboard"
               disabled={verversPending}
               onClick={() => startVervers(() => router.refresh())}
@@ -153,7 +153,7 @@ export function MaandKop({
       <Uitklapbaar open={open}>
         <div className="border-t border-rand pt-4 mt-4 space-y-3">
           <p className="text-sm text-tekst-secundair">
-            Kies een maand om te beginnen opvolgen — bijvoorbeeld een vorige maand als historiek, of de volgende
+            Kies een maand om te beginnen opvolgen: bijvoorbeeld een vorige maand als historiek, of de volgende
             maand om nu al vooruit te plannen.
           </p>
           <div>
@@ -174,7 +174,7 @@ export function MaandKop({
                 Kopieer gegevens van {formatteerMaandNaam(huidigeMaand)}
               </p>
               <p className="text-xs text-tekst-secundair mt-0.5">
-                Inkomen, vaste kosten, facturen en extra uitgaven worden overgenomen — alles opnieuw onbetaald en
+                Inkomen, vaste kosten, facturen en extra uitgaven worden overgenomen, alles opnieuw onbetaald en
                 niet-geskipt, zodat je die nieuwe maand vers kan opvolgen. Zonder kopiëren begin je met een lege
                 maand.
               </p>

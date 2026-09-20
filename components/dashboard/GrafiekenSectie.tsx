@@ -96,10 +96,12 @@ function EenGrafiek({
   titel,
   data,
   snelToevoegen,
+  magToevoegen,
 }: {
   titel: string;
   data: Segment[];
   snelToevoegen: React.ReactNode;
+  magToevoegen: boolean;
 }) {
   const totaal = data.reduce((s, d) => s + d.waarde, 0);
 
@@ -125,8 +127,8 @@ function EenGrafiek({
           </ResponsiveContainer>
           <div className="absolute inset-0 flex items-center justify-center px-8">
             <p className="text-xs text-tekst-secundair text-center leading-snug">
-              Nog geen data
-              <br />— vul je data in.
+              Nog geen data.
+              <br />Vul je data in.
             </p>
           </div>
         </div>
@@ -158,7 +160,7 @@ function EenGrafiek({
           ))}
         </ul>
       )}
-      {snelToevoegen}
+      {magToevoegen && snelToevoegen}
     </div>
   );
 }
@@ -183,6 +185,8 @@ interface Props {
     eind_datum: string | null;
   }) => ActieResultaat;
   onExtraUitgaveToevoegen: (data: { label: string; bedrag: number; overslaanbaar: boolean; betaalmethode: Betaalmethode }) => ActieResultaat;
+  /** Een viewer mag niets toevoegen — de "snel toevoegen"-formulieren verschijnen dan niet. */
+  magToevoegen?: boolean;
 }
 
 /**
@@ -200,6 +204,7 @@ export function GrafiekenSectie({
   onInkomenToevoegen,
   onVasteKostToevoegen,
   onExtraUitgaveToevoegen,
+  magToevoegen = true,
 }: Props) {
   const inkomenData: Segment[] = inkomen.map((i) => {
     let waarde: number;
@@ -230,6 +235,7 @@ export function GrafiekenSectie({
         <EenGrafiek
           titel="Inkomen per bron"
           data={inkomenData}
+          magToevoegen={magToevoegen}
           snelToevoegen={
             <SnelToevoegen
               soort="inkomen"
@@ -247,6 +253,7 @@ export function GrafiekenSectie({
         <EenGrafiek
           titel="Vaste kosten per categorie"
           data={kostenData}
+          magToevoegen={magToevoegen}
           snelToevoegen={
             <SnelToevoegen
               soort="kosten"
@@ -267,6 +274,7 @@ export function GrafiekenSectie({
         <EenGrafiek
           titel="Extra uitgaven"
           data={uitgavenData}
+          magToevoegen={magToevoegen}
           snelToevoegen={
             <SnelToevoegen
               soort="uitgaven"

@@ -19,6 +19,8 @@ interface Props {
   }) => ActieResultaat;
   onHernoemen: (id: string, naam: string) => ActieResultaat;
   onVerwijderen: (id: string) => ActieResultaat;
+  /** Een viewer mag niets toevoegen — de knoppen/formulieren verschijnen dan niet. */
+  magToevoegen?: boolean;
 }
 
 /** Eén investeringssoort (bv. Goud, Aandelen) met zijn eigen inleg-geschiedenis en "+ Inleg"-formulier. */
@@ -28,12 +30,14 @@ function InvesteringKaart({
   onToevoegen,
   onHernoemen,
   onVerwijderen,
+  magToevoegen,
 }: {
   investering: Investering;
   transacties: InvesteringTransactie[];
   onToevoegen: Props["onTransactieToevoegen"];
   onHernoemen: Props["onHernoemen"];
   onVerwijderen: Props["onVerwijderen"];
+  magToevoegen: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -135,7 +139,7 @@ function InvesteringKaart({
             <li key={t.id} className="flex justify-between items-center text-xs bg-white/60 rounded-lg px-2.5 py-1.5">
               <span className="text-tekst-secundair truncate">
                 {t.datum}
-                {t.notitie ? ` — ${t.notitie}` : ""}
+                {t.notitie ? ` (${t.notitie})` : ""}
               </span>
               <span className="font-bold tabular-nums shrink-0 ml-2">€{t.bedrag.toFixed(2)}</span>
             </li>
@@ -143,39 +147,43 @@ function InvesteringKaart({
         </ul>
       )}
 
-      <Uitklapbaar open={open}>
-        <form action={submit} className="space-y-2 pt-1">
-          <input
-            name="bedrag"
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0.01"
-            placeholder="Bedrag (€)"
-            className="veld-input !min-h-[38px] text-sm"
-            required
-          />
-          <input name="datum" type="date" className="veld-input !min-h-[38px] text-sm" required />
-          <input name="notitie" placeholder="Notitie (optioneel)" className="veld-input !min-h-[38px] text-sm" />
-          {fout && <p className="veld-fout !mt-1 !text-xs">{fout}</p>}
-          <div className="flex gap-1.5">
-            <button type="submit" className="knop-primair !min-h-[36px] flex-1 !text-sm" disabled={isPending}>
-              Opslaan
+      {magToevoegen && (
+        <>
+          <Uitklapbaar open={open}>
+            <form action={submit} className="space-y-2 pt-1">
+              <input
+                name="bedrag"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0.01"
+                placeholder="Bedrag (€)"
+                className="veld-input !min-h-[38px] text-sm"
+                required
+              />
+              <input name="datum" type="date" className="veld-input !min-h-[38px] text-sm" required />
+              <input name="notitie" placeholder="Notitie (optioneel)" className="veld-input !min-h-[38px] text-sm" />
+              {fout && <p className="veld-fout !mt-1 !text-xs">{fout}</p>}
+              <div className="flex gap-1.5">
+                <button type="submit" className="knop-primair !min-h-[36px] flex-1 !text-sm" disabled={isPending}>
+                  Opslaan
+                </button>
+                <button type="button" className="knop-secundair !min-h-[36px] !text-sm" onClick={() => setOpen(false)}>
+                  Annuleren
+                </button>
+              </div>
+            </form>
+          </Uitklapbaar>
+          {!open && (
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="w-full flex items-center justify-center gap-1 min-h-[36px] rounded-full border border-goud/30 text-xs font-semibold text-goud hover:bg-goud/10 transition"
+            >
+              <Plus size={14} strokeWidth={2.5} /> Inleg registreren
             </button>
-            <button type="button" className="knop-secundair !min-h-[36px] !text-sm" onClick={() => setOpen(false)}>
-              Annuleren
-            </button>
-          </div>
-        </form>
-      </Uitklapbaar>
-      {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="w-full flex items-center justify-center gap-1 min-h-[36px] rounded-full border border-goud/30 text-xs font-semibold text-goud hover:bg-goud/10 transition"
-        >
-          <Plus size={14} strokeWidth={2.5} /> Inleg registreren
-        </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -193,6 +201,7 @@ export function InvesteringenSectie({
   onTransactieToevoegen,
   onHernoemen,
   onVerwijderen,
+  magToevoegen = true,
 }: Props) {
   const [nieuwOpen, setNieuwOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -224,10 +233,13 @@ export function InvesteringenSectie({
         )}
       </div>
 
-      {investeringen.length === 0 && !nieuwOpen && (
+      {investeringen.length === 0 && !nieuwOpen && magToevoegen && (
         <p className="text-tekst-secundair text-sm mb-3">
-          Nog geen investeringen — voeg er eentje toe, bv. &ldquo;Goud&rdquo; of &ldquo;Aandelen&rdquo;.
+          Nog geen investeringen. Voeg er eentje toe, bv. &ldquo;Goud&rdquo; of &ldquo;Aandelen&rdquo;.
         </p>
+      )}
+      {investeringen.length === 0 && !magToevoegen && (
+        <p className="text-tekst-secundair text-sm mb-3">Nog niets ingevuld.</p>
       )}
 
       <div className="space-y-3 mb-3">
@@ -239,28 +251,33 @@ export function InvesteringenSectie({
             onToevoegen={onTransactieToevoegen}
             onHernoemen={onHernoemen}
             onVerwijderen={onVerwijderen}
+            magToevoegen={magToevoegen}
           />
         ))}
       </div>
 
-      <Uitklapbaar open={nieuwOpen}>
-        <form action={submitNieuw} className="space-y-2 border-t border-rand pt-3">
-          <input name="naam" placeholder="Bv. Aandelen, Crypto, ..." className="veld-input" required />
-          {fout && <p className="veld-fout">{fout}</p>}
-          <div className="flex gap-2">
-            <button type="submit" className="knop-primair flex-1" disabled={isPending}>
-              Opslaan
+      {magToevoegen && (
+        <>
+          <Uitklapbaar open={nieuwOpen}>
+            <form action={submitNieuw} className="space-y-2 border-t border-rand pt-3">
+              <input name="naam" placeholder="Bv. Aandelen, Crypto, ..." className="veld-input" required />
+              {fout && <p className="veld-fout">{fout}</p>}
+              <div className="flex gap-2">
+                <button type="submit" className="knop-primair flex-1" disabled={isPending}>
+                  Opslaan
+                </button>
+                <button type="button" className="knop-secundair" onClick={() => setNieuwOpen(false)}>
+                  Annuleren
+                </button>
+              </div>
+            </form>
+          </Uitklapbaar>
+          {!nieuwOpen && (
+            <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setNieuwOpen(true)}>
+              <Plus size={18} strokeWidth={2.5} /> Nieuwe investering
             </button>
-            <button type="button" className="knop-secundair" onClick={() => setNieuwOpen(false)}>
-              Annuleren
-            </button>
-          </div>
-        </form>
-      </Uitklapbaar>
-      {!nieuwOpen && (
-        <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setNieuwOpen(true)}>
-          <Plus size={18} strokeWidth={2.5} /> Nieuwe investering
-        </button>
+          )}
+        </>
       )}
     </div>
   );

@@ -32,7 +32,7 @@ export function Toast({ bericht, onOngedaanMaken, onSluiten, duurMs = 5000 }: Pr
         role="status"
         aria-live="polite"
         data-testid="extra-kost-toast"
-        style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{ bottom: "calc(6.75rem + env(safe-area-inset-bottom, 0px))" }}
         className="absolute pointer-events-auto left-1/2 -translate-x-1/2 max-w-[calc(100vw-2rem)]
           flex items-center gap-3 rounded-full bg-tekst-primair text-white pl-3 pr-2 py-2 shadow-lg
           animate-fade-in-up motion-reduce:animate-none"

@@ -95,7 +95,7 @@ export function LogViewer({
 
       {gefilterd.length === 0 ? (
         <p className="text-tekst-secundair text-center py-8">
-          {regels.length === 0 ? "Nog geen logs — dat is goed nieuws!" : "Geen logregels gevonden voor deze filter."}
+          {regels.length === 0 ? "Nog geen logs, dat is goed nieuws!" : "Geen logregels gevonden voor deze filter."}
         </p>
       ) : (
         <ul className="space-y-2">

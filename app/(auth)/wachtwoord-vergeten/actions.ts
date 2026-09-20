@@ -67,7 +67,7 @@ export async function vraagWachtwoordResetAan(
         });
       }
     } else {
-      logger.error({ code: "AUTH_003", message: "Geen SITE_URL beschikbaar — kon geen reset-link opbouwen" });
+      logger.error({ code: "AUTH_003", message: "Geen SITE_URL beschikbaar, kon geen reset-link opbouwen" });
     }
   }
 

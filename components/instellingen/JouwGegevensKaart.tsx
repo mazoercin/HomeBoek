@@ -128,13 +128,13 @@ export function JouwGegevensKaart({ scope, gezinsledenNamen, onDownloaden, onVer
                 ) : (
                   <p className="text-sm text-tekst-secundair mt-0.5">
                     Je account verdwijnt en je kan niet meer inloggen. Je ingevulde inkomen, kosten en doelen
-                    blijven gewoon bestaan voor de rest van het gezin — dat is het verschil met &ldquo;Verlaat
+                    blijven gewoon bestaan voor de rest van het gezin. Dat is het verschil met &ldquo;Verlaat
                     gezin&rdquo; (dat laat enkel je account los, zonder het te verwijderen) en &ldquo;Alle data
                     wissen&rdquo; (dat wist juist de data terwijl je account blijft bestaan).
                   </p>
                 )}
                 <p className="text-xs text-tekst-secundair mt-2">
-                  Download eerst je gegevens hierboven als je ze wil bewaren — dat kan hierna niet meer.
+                  Download eerst je gegevens hierboven als je ze wil bewaren. Dat kan hierna niet meer.
                 </p>
               </div>
             </div>

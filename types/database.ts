@@ -198,6 +198,6 @@ export const CATEGORIE_INFO: Record<Categorie, { icoon: string; label: string }>
   water: { icoon: "💧", label: "Water" },
   internet: { icoon: "🌐", label: "Internet / TV" },
   verzekering: { icoon: "🛡️", label: "Verzekering" },
-  krediet: { icoon: "💳", label: "Lening / krediet" },
+  krediet: { icoon: "💳", label: "Lening / kredietkaart (Visa)" },
   andere: { icoon: "📄", label: "Andere vaste kost" },
 };

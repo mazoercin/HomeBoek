@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
-import { PiggyBank } from "lucide-react";
+import { Scale } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import type { DashboardData } from "@/lib/data/dashboard";
 import {
   berekenTotaalInkomen,
+  berekenInkomenPerBron,
   berekenOpenstaandBedrag,
   berekenNogTeBetalen,
   berekenWatOverblijft,
@@ -128,12 +129,8 @@ export function DashboardClient({
   // Next.js onthoudt soms de scrollpositie van een eerder bezoek aan
   // dezelfde URL. Bij het wisselen van maand moet je altijd bovenaan
   // dat nieuwe dashboard landen, dus forceren we dat expliciet i.p.v.
-  // te vertrouwen op scroll-restoration. Staat er een hash in de URL
-  // (bv. binnengekomen via de navigatiebalk-link naar #inkomen), dan
-  // laten we dit met rust — anders wint deze reset het van de
-  // automatische scroll naar dat anker.
+  // te vertrouwen op scroll-restoration.
   useEffect(() => {
-    if (window.location.hash) return;
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [huidigeMaand]);
 
@@ -145,6 +142,16 @@ export function DashboardClient({
         weekBedragen: data.inkomenWeekBedragen,
         maand: huidigeMaand,
       }) - berekenBijdragenAftrekVoorMaand(data.doelBijdragen, huidigeMaand),
+    [data, huidigeMaand]
+  );
+  const inkomenPerBron = useMemo(
+    () =>
+      berekenInkomenPerBron({
+        inkomen: data.inkomen,
+        extraInkomen: data.extraInkomen,
+        weekBedragen: data.inkomenWeekBedragen,
+        maand: huidigeMaand,
+      }),
     [data, huidigeMaand]
   );
   const uitgavenHuidigeMaand = useMemo(
@@ -307,6 +314,7 @@ export function DashboardClient({
         <ScrollReveal>
           <SamenvattingKaarten
             totaalInkomen={inkomenHuidigeMaand}
+            inkomenPerBron={inkomenPerBron}
             openstaandBedrag={uitgavenHuidigeMaand}
             watOverblijft={watOverblijftHuidigeMaand}
             betaaldHuidigeMaand={betaaldHuidigeMaand}
@@ -328,6 +336,7 @@ export function DashboardClient({
             onInkomenToevoegen={(d) => acties.voegInkomenToe(d, huidigeMaand)}
             onVasteKostToevoegen={(d) => acties.voegVasteKostToe(d, huidigeMaand)}
             onExtraUitgaveToevoegen={(d) => acties.voegExtraUitgaveToe(d, huidigeMaand)}
+            magToevoegen={magSlepen}
           />
         </ScrollReveal>
       ),
@@ -342,6 +351,7 @@ export function DashboardClient({
             onToevoegen={(d) => acties.voegInkomenToe(d, huidigeMaand)}
             onVerwijderen={acties.verwijderInkomen}
             onZetWeekBedragen={acties.zetInkomenWeekBedragen}
+            magToevoegen={magSlepen}
           />
         </ScrollReveal>
       ),
@@ -357,12 +367,13 @@ export function DashboardClient({
               nummer: 2,
               titel: "Voeg je vaste kosten toe",
               uitleg: "Kosten die maandelijks terugkomen en niet zomaar stopbaar zijn: huur, verzekering, kredieten.",
-              voorbeeld: "Huur — €1750,00",
+              voorbeeld: "Huur: €1750,00",
             }}
             items={data.vasteKosten}
             onZetBetaald={acties.zetVasteKostBetaald}
             onToevoegen={(d) => acties.voegVasteKostToe(d, huidigeMaand)}
             onVerwijderen={acties.verwijderVasteKost}
+            magToevoegen={magSlepen}
           />
         </ScrollReveal>
       ),
@@ -377,13 +388,14 @@ export function DashboardClient({
             stapTip={{
               nummer: 3,
               titel: "Voeg je facturen toe",
-              uitleg: "Elektriciteit, mazout/gas, water, internet — alles wat per factuur binnenkomt.",
-              voorbeeld: "Elektriciteit — €120,00",
+              uitleg: "Elektriciteit, mazout/gas, water, internet: alles wat per factuur binnenkomt.",
+              voorbeeld: "Elektriciteit: €120,00",
             }}
             items={data.facturen}
             onZetBetaald={acties.zetFactuurBetaald}
             onToevoegen={(d) => acties.voegFactuurToe(d, huidigeMaand)}
             onVerwijderen={acties.verwijderFactuur}
+            magToevoegen={magSlepen}
           />
         </ScrollReveal>
       ),
@@ -398,6 +410,7 @@ export function DashboardClient({
             onVerwijderen={acties.verwijderExtraUitgave}
             onZetGeskipt={acties.zetExtraUitgaveGeskipt}
             highlightId={nieuwItemId}
+            magToevoegen={magSlepen}
           />
         </ScrollReveal>
       ),
@@ -431,6 +444,7 @@ export function DashboardClient({
             onPauzeren={acties.zetDoelGepauzeerd}
             onHerschikken={acties.herschikDoelen}
             onBijdrageToevoegen={acties.voegDoelBijdrageToe}
+            magToevoegen={magSlepen}
           />
         </ScrollReveal>
       ),
@@ -446,6 +460,7 @@ export function DashboardClient({
             onTransactieToevoegen={acties.voegInvesteringTransactieToe}
             onHernoemen={acties.hernoemInvestering}
             onVerwijderen={acties.verwijderInvestering}
+            magToevoegen={magSlepen}
           />
         </ScrollReveal>
       ),
@@ -467,7 +482,7 @@ export function DashboardClient({
       <div>
         <h1 className="flex items-center gap-2.5 text-2xl lg:text-3xl font-extrabold tracking-tight text-tekst-primair">
           {householdNaam}
-          <PiggyBank size={26} className="text-primair shrink-0" strokeWidth={2.25} aria-hidden />
+          <Scale size={26} className="text-primair shrink-0" strokeWidth={2.25} aria-hidden />
           <span className="text-primair">Gezinsfinanciën</span>
         </h1>
         <p className="text-sm text-tekst-secundair mt-0.5">Alles overzichtelijk op één plek.</p>

@@ -26,7 +26,7 @@ export function haalSiteUrl(): string | null {
   if (process.env.NODE_ENV === "production") {
     logger.error({
       code: "AUTH_003",
-      message: "SITE_URL ontbreekt in productie — weiger een link op te bouwen uit request-headers",
+      message: "SITE_URL ontbreekt in productie, weiger een link op te bouwen uit request-headers",
     });
     return null;
   }

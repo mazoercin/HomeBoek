@@ -41,7 +41,7 @@ export async function requireSessie(): Promise<SessieData> {
   } catch (error) {
     logger.warn({
       code: "AUTH_002",
-      message: "Kon Supabase-sessie niet live verifiëren — cookie vertrouwd, wellicht een tijdelijke netwerkfout",
+      message: "Kon Supabase-sessie niet live verifiëren, cookie vertrouwd (wellicht een tijdelijke netwerkfout)",
       context: { gebruikerId: sessie.gebruikerId, error: error instanceof Error ? error.message : String(error) },
     });
   }

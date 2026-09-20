@@ -37,7 +37,7 @@ export function haalGezouteHash(waarde: string): string | null {
   if (!salt) {
     logger.error({
       code: "AUTH_002",
-      message: "RATE_LIMIT_SALT ontbreekt — login-rate-limiting staat effectief uit",
+      message: "RATE_LIMIT_SALT ontbreekt, login-rate-limiting staat effectief uit",
     });
     return null;
   }

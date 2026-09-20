@@ -17,8 +17,17 @@ function useKortePulse(waarde: number): boolean {
   return pulseren;
 }
 
+interface InkomenPerBron {
+  zelf: number;
+  partner: number;
+  ander: number;
+  extra: number;
+}
+
 interface Props {
   totaalInkomen: number;
+  /** Onderverdeling van het inkomen per bron — subtiel getoond onder "Totaal inkomen" zodra er meer dan één bron meetelt. */
+  inkomenPerBron?: InkomenPerBron | null;
   openstaandBedrag: number;
   watOverblijft: number;
   /** Van de vaste kosten + facturen van deze maand: hoeveel staat al op "betaald". */
@@ -36,6 +45,7 @@ interface Props {
 /** Rij 1: de kernkaarten — inkomen, openstaand, wat overblijft (groen/rood), en optioneel maaltijdcheques. */
 export function SamenvattingKaarten({
   totaalInkomen,
+  inkomenPerBron,
   openstaandBedrag,
   watOverblijft,
   betaaldHuidigeMaand,
@@ -43,6 +53,17 @@ export function SamenvattingKaarten({
   maaltijdcheques,
 }: Props) {
   const positief = watOverblijft >= 0;
+  const inkomenBronRijen = inkomenPerBron
+    ? (
+        [
+          { label: "Zelf", bedrag: inkomenPerBron.zelf, kleur: "bg-primair" },
+          { label: "Partner", bedrag: inkomenPerBron.partner, kleur: "bg-secundair" },
+          { label: "Ander", bedrag: inkomenPerBron.ander, kleur: "bg-slate-300" },
+          { label: "Extra", bedrag: inkomenPerBron.extra, kleur: "bg-succes" },
+        ] as const
+      ).filter((rij) => rij.bedrag > 0)
+    : [];
+  const toonInkomenPerBron = inkomenBronRijen.length > 1;
   const openstaandPulseert = useKortePulse(openstaandBedrag);
   const watOverblijftPulseert = useKortePulse(watOverblijft);
   const toonMaaltijdcheques = !!maaltijdcheques && (maaltijdcheques.ontvangen !== 0 || maaltijdcheques.besteed !== 0);
@@ -65,6 +86,15 @@ export function SamenvattingKaarten({
           <a href="#inkomen" className="text-xs font-semibold text-primair hover:underline mt-1.5 inline-block">
             Vul in bij Vast inkomen →
           </a>
+        )}
+        {toonInkomenPerBron && (
+          <div className="flex items-center gap-x-3 gap-y-1 mt-2 text-xs flex-wrap">
+            {inkomenBronRijen.map((rij) => (
+              <span key={rij.label} className="flex items-center gap-1 font-semibold text-tekst-secundair">
+                <span className={`h-1.5 w-1.5 rounded-full ${rij.kleur}`} /> {rij.label} €{rij.bedrag.toFixed(2)}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 

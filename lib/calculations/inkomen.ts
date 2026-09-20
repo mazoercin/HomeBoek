@@ -115,3 +115,39 @@ export function berekenTotaalInkomen(input: InkomenInput): number {
 export function berekenMaandequivalent(bedrag: number, frequentie: InkomenFrequentie): number {
   return bedrag * (FREQUENTIE_FACTOR[frequentie] ?? 0);
 }
+
+export interface InkomenPerBron {
+  zelf: number;
+  partner: number;
+  ander: number;
+  /** Eenmalig extra inkomen deze maand — heeft geen eigen bron, dus een aparte emmer i.p.v. bij "ander" te tellen. */
+  extra: number;
+}
+
+/**
+ * Zelfde optelling als berekenTotaalInkomen, maar uitgesplitst per bron
+ * — voor een subtiele onderverdeling onder "Totaal inkomen". Bron
+ * 'maaltijdcheques' telt hier bewust ook niet mee, om dezelfde reden
+ * als in berekenTotaalInkomen (dat heeft al zijn eigen kaartje).
+ */
+export function berekenInkomenPerBron(input: InkomenInput): InkomenPerBron {
+  const resultaat: InkomenPerBron = { zelf: 0, partner: 0, ander: 0, extra: 0 };
+
+  for (const post of input.inkomen) {
+    if (post.bron === "maaltijdcheques") continue;
+    try {
+      resultaat[post.bron] += berekenInkomenMaandbedrag(post, input.weekBedragen);
+    } catch {
+      // Corrupte rij: negeren — berekenTotaalInkomen loopt over dezelfde
+      // data en schrijft daar al een CALC_001-logregel voor.
+    }
+  }
+
+  for (const post of input.extraInkomen) {
+    if (post.maand === input.maand && Number.isFinite(post.bedrag) && post.bedrag >= 0) {
+      resultaat.extra += post.bedrag;
+    }
+  }
+
+  return resultaat;
+}

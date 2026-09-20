@@ -23,6 +23,8 @@ interface Props {
     inkomenId: string,
     weekBedragen: { week_nummer: number; bedrag: number }[]
   ) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  /** Een viewer mag niets toevoegen — de knop/het formulier verschijnt dan niet. */
+  magToevoegen?: boolean;
 }
 
 const BRONNEN: { waarde: InkomenBron; label: string }[] = [
@@ -116,7 +118,7 @@ function WeekBedragenEditor({
       <Uitklapbaar open={open}>
         <div className="mt-2 rounded-xl border border-rand/70 p-3 space-y-2">
           <p className="text-xs text-tekst-secundair">
-            Vul in wat je die week echt binnenkreeg. Een week leeg laten en opslaan gebruikt geen weekbedrag — vul
+            Vul in wat je die week echt binnenkreeg. Een week leeg laten en opslaan gebruikt geen weekbedrag. Vul
             alle 4 leeg in om terug te schakelen naar het vaste bedrag × 4.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -156,7 +158,7 @@ function WeekBedragenEditor({
   );
 }
 
-export function InkomenSectie({ items, weekBedragen, onToevoegen, onVerwijderen, onZetWeekBedragen }: Props) {
+export function InkomenSectie({ items, weekBedragen, onToevoegen, onVerwijderen, onZetWeekBedragen, magToevoegen = true }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -189,20 +191,21 @@ export function InkomenSectie({ items, weekBedragen, onToevoegen, onVerwijderen,
     <div className="kaart" id="inkomen">
       <h2 className="text-lg font-bold tracking-tight mb-1">Inkomen</h2>
       <p className="text-xs text-tekst-secundair mb-4">
-        Kies per post hoe vaak het binnenkomt — we rekenen automatisch om naar een maandbedrag. Bij &ldquo;wekelijks&rdquo;
-        kan je ook elke week apart invullen als het bedrag varieert. Bron &ldquo;Maaltijdcheques&rdquo; telt apart —
+        Kies per post hoe vaak het binnenkomt. We rekenen automatisch om naar een maandbedrag. Bij &ldquo;wekelijks&rdquo;
+        kan je ook elke week apart invullen als het bedrag varieert. Bron &ldquo;Maaltijdcheques&rdquo; telt apart:
         dat geld komt niet op je rekening, dus het telt niet mee bij &ldquo;Totaal inkomen&rdquo; hierboven (zie het
         aparte maaltijdcheques-blok als je die gebruikt).
       </p>
 
-      {items.length === 0 && !formOpen && (
+      {items.length === 0 && !formOpen && magToevoegen && (
         <StapTip
           stapNummer={1}
           titel="Begin met je inkomen"
-          uitleg="Vul elk inkomen apart in — je loon, dat van je partner, kindergeld, een freelance-opdracht, ... met de juiste frequentie."
-          voorbeeld="Loon Ercin — €2400,00 maandelijks"
+          uitleg="Vul elk inkomen apart in: je loon, dat van je partner, kindergeld, een freelance-opdracht, ... met de juiste frequentie."
+          voorbeeld="Loon Ercin: €2400,00 maandelijks"
         />
       )}
+      {items.length === 0 && !magToevoegen && <p className="text-sm text-tekst-secundair">Nog niets ingevuld.</p>}
 
       <ul className="space-y-2 mb-2">
         {zichtbareItems.map((item) => {
@@ -255,68 +258,72 @@ export function InkomenSectie({ items, weekBedragen, onToevoegen, onVerwijderen,
         <ToonMeerKnop uitgeklapt={uitgeklapt} aantalVerborgen={aantalVerborgen} onKlik={wisselUitgeklapt} />
       )}
 
-      <Uitklapbaar open={formOpen}>
-        <form action={submit} className="space-y-3 border-t border-rand pt-3">
-          <div>
-            <label className="veld-label" htmlFor="inkomen-bron">
-              Bron
-            </label>
-            <select id="inkomen-bron" name="bron" className="veld-input">
-              {BRONNEN.map((b) => (
-                <option key={b.waarde} value={b.waarde}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="veld-label" htmlFor="inkomen-label">
-              Label
-            </label>
-            <input id="inkomen-label" name="label" className="veld-input" required />
-          </div>
-          <div>
-            <label className="veld-label" htmlFor="inkomen-bedrag">
-              Bedrag (€)
-            </label>
-            <input
-              id="inkomen-bedrag"
-              name="bedrag"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0.01"
-              className="veld-input"
-              required
-            />
-          </div>
-          <div>
-            <label className="veld-label" htmlFor="inkomen-frequentie">
-              Frequentie
-            </label>
-            <select id="inkomen-frequentie" name="frequentie" className="veld-input" defaultValue="maandelijks">
-              {FREQUENTIES.map((f) => (
-                <option key={f.waarde} value={f.waarde}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          {fout && <p className="veld-fout">{fout}</p>}
-          <div className="flex gap-2">
-            <button type="submit" className="knop-primair flex-1" disabled={isPending}>
-              Opslaan
+      {magToevoegen && (
+        <>
+          <Uitklapbaar open={formOpen}>
+            <form action={submit} className="space-y-3 border-t border-rand pt-3">
+              <div>
+                <label className="veld-label" htmlFor="inkomen-bron">
+                  Bron
+                </label>
+                <select id="inkomen-bron" name="bron" className="veld-input">
+                  {BRONNEN.map((b) => (
+                    <option key={b.waarde} value={b.waarde}>
+                      {b.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="veld-label" htmlFor="inkomen-label">
+                  Label
+                </label>
+                <input id="inkomen-label" name="label" className="veld-input" required />
+              </div>
+              <div>
+                <label className="veld-label" htmlFor="inkomen-bedrag">
+                  Bedrag (€)
+                </label>
+                <input
+                  id="inkomen-bedrag"
+                  name="bedrag"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  className="veld-input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="veld-label" htmlFor="inkomen-frequentie">
+                  Frequentie
+                </label>
+                <select id="inkomen-frequentie" name="frequentie" className="veld-input" defaultValue="maandelijks">
+                  {FREQUENTIES.map((f) => (
+                    <option key={f.waarde} value={f.waarde}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {fout && <p className="veld-fout">{fout}</p>}
+              <div className="flex gap-2">
+                <button type="submit" className="knop-primair flex-1" disabled={isPending}>
+                  Opslaan
+                </button>
+                <button type="button" className="knop-secundair" onClick={() => setFormOpen(false)}>
+                  Annuleren
+                </button>
+              </div>
+            </form>
+          </Uitklapbaar>
+          {!formOpen && (
+            <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
+              <Plus size={18} strokeWidth={2.5} /> Toevoegen
             </button>
-            <button type="button" className="knop-secundair" onClick={() => setFormOpen(false)}>
-              Annuleren
-            </button>
-          </div>
-        </form>
-      </Uitklapbaar>
-      {!formOpen && (
-        <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
-          <Plus size={18} strokeWidth={2.5} /> Toevoegen
-        </button>
+          )}
+        </>
       )}
     </div>
   );

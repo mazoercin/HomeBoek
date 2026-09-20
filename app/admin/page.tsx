@@ -46,7 +46,7 @@ export default async function AdminPagina() {
             <ShieldCheck size={17} color="#4F46E5" strokeWidth={2.25} />
           </span>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Admin — Gebruikers</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">Admin: gebruikers</h1>
             <p className="text-sm text-tekst-secundair">
               {gebruikers.length} {gebruikers.length === 1 ? "account" : "accounts"} aangemaakt.
             </p>

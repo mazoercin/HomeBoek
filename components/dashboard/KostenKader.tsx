@@ -28,12 +28,14 @@ interface Props {
     eind_datum: string | null;
   }) => Promise<{ gelukt: boolean; foutmelding?: string }>;
   onVerwijderen: (id: string) => Promise<{ gelukt: boolean; foutmelding?: string }>;
+  /** Een viewer mag niets toevoegen — de knop/het formulier verschijnt dan niet. */
+  magToevoegen?: boolean;
 }
 
 const CATEGORIEEN = Object.keys(CATEGORIE_INFO) as Categorie[];
 
 /** Herbruikbaar kader voor vaste kosten én facturen — zelfde structuur en gedrag. */
-export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onToevoegen, onVerwijderen }: Props) {
+export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onToevoegen, onVerwijderen, magToevoegen = true }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -98,9 +100,10 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
         )}
       </div>
 
-      {items.length === 0 && !formOpen && (
+      {items.length === 0 && !formOpen && magToevoegen && (
         <StapTip stapNummer={stapTip.nummer} titel={stapTip.titel} uitleg={stapTip.uitleg} voorbeeld={stapTip.voorbeeld} />
       )}
+      {items.length === 0 && !magToevoegen && <p className="text-sm text-tekst-secundair">Nog niets ingevuld.</p>}
 
       <ul className="space-y-2 mb-2">
         {zichtbareItems.map((item) => {
@@ -109,42 +112,43 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
           return (
             <li
               key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-rand/70 p-3 transition-colors hover:bg-slate-50/80"
+              className="rounded-xl border border-rand/70 p-3 transition-colors hover:bg-slate-50/80"
             >
-              <CategorieIcon categorie={item.categorie} />
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-tekst-primair truncate leading-tight">{item.label}</p>
-                <p className="text-xs text-tekst-secundair truncate mt-0.5">{CATEGORIE_INFO[item.categorie].label}</p>
+              <div className="flex items-center gap-3">
+                <CategorieIcon categorie={item.categorie} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-tekst-primair truncate leading-tight">{item.label}</p>
+                  <p className="text-xs text-tekst-secundair truncate mt-0.5">{CATEGORIE_INFO[item.categorie].label}</p>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Verwijder ${item.label}`}
+                  disabled={isPending}
+                  onClick={() => {
+                    if (confirm(`"${item.label}" verwijderen?`)) {
+                      startTransition(async () => {
+                        await onVerwijderen(item.id);
+                      });
+                    }
+                  }}
+                  className="shrink-0 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-tekort hover:bg-tekort-bg transition"
+                >
+                  <Trash2 size={17} strokeWidth={2} />
+                </button>
               </div>
-              <div className="flex flex-col items-end shrink-0 mr-1">
-                <span className="text-[11px] uppercase tracking-wide text-tekst-secundair font-medium">Bedrag</span>
+              <div className="flex items-center justify-between gap-3 mt-2.5 pl-[52px]">
                 <span className="font-extrabold text-tekst-primair tabular-nums">€{item.bedrag.toFixed(2)}</span>
-              </div>
-              <Switch
-                aan={betaald}
-                label={betaald ? `${item.label} markeren als onbetaald` : `${item.label} markeren als betaald`}
-                disabled={isPending}
-                onWijzig={() =>
-                  startTransition(async () => {
-                    await onZetBetaald(item.id, !betaald);
-                  })
-                }
-              />
-              <button
-                type="button"
-                aria-label={`Verwijder ${item.label}`}
-                disabled={isPending}
-                onClick={() => {
-                  if (confirm(`"${item.label}" verwijderen?`)) {
+                <Switch
+                  aan={betaald}
+                  label={betaald ? `${item.label} markeren als onbetaald` : `${item.label} markeren als betaald`}
+                  disabled={isPending}
+                  onWijzig={() =>
                     startTransition(async () => {
-                      await onVerwijderen(item.id);
-                    });
+                      await onZetBetaald(item.id, !betaald);
+                    })
                   }
-                }}
-                className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-full text-tekst-secundair hover:text-tekort hover:bg-tekort-bg transition"
-              >
-                <Trash2 size={17} strokeWidth={2} />
-              </button>
+                />
+              </div>
             </li>
           );
         })}
@@ -154,49 +158,53 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
         <ToonMeerKnop uitgeklapt={uitgeklapt} aantalVerborgen={aantalVerborgen} onKlik={wisselUitgeklapt} />
       )}
 
-      <Uitklapbaar open={formOpen}>
-        <form action={submit} className="space-y-3 border-t border-rand pt-4">
-          <div>
-            <label className="veld-label">Label</label>
-            <input name="label" className="veld-input" required />
-          </div>
-          <div>
-            <label className="veld-label">Bedrag (€)</label>
-            <input name="bedrag" type="number" inputMode="decimal" step="0.01" min="0.01" className="veld-input" required />
-          </div>
-          <div>
-            <label className="veld-label">Categorie</label>
-            <select name="categorie" className="veld-input">
-              {CATEGORIEEN.map((c) => (
-                <option key={c} value={c}>
-                  {CATEGORIE_INFO[c].label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="veld-label">Vervaldag (dag van de maand, optioneel)</label>
-            <input name="vervaldag" type="number" inputMode="numeric" min="1" max="31" className="veld-input" />
-          </div>
-          <div>
-            <label className="veld-label">Einddatum (optioneel)</label>
-            <input name="eind_datum" type="date" className="veld-input" />
-          </div>
-          {fout && <p className="veld-fout">{fout}</p>}
-          <div className="flex gap-2">
-            <button type="submit" className="knop-primair flex-1" disabled={isPending}>
-              Opslaan
+      {magToevoegen && (
+        <>
+          <Uitklapbaar open={formOpen}>
+            <form action={submit} className="space-y-3 border-t border-rand pt-4">
+              <div>
+                <label className="veld-label">Label</label>
+                <input name="label" className="veld-input" required />
+              </div>
+              <div>
+                <label className="veld-label">Bedrag (€)</label>
+                <input name="bedrag" type="number" inputMode="decimal" step="0.01" min="0.01" className="veld-input" required />
+              </div>
+              <div>
+                <label className="veld-label">Categorie</label>
+                <select name="categorie" className="veld-input">
+                  {CATEGORIEEN.map((c) => (
+                    <option key={c} value={c}>
+                      {CATEGORIE_INFO[c].label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="veld-label">Vervaldag (dag van de maand, optioneel)</label>
+                <input name="vervaldag" type="number" inputMode="numeric" min="1" max="31" className="veld-input" />
+              </div>
+              <div>
+                <label className="veld-label">Einddatum (optioneel)</label>
+                <input name="eind_datum" type="date" className="veld-input" />
+              </div>
+              {fout && <p className="veld-fout">{fout}</p>}
+              <div className="flex gap-2">
+                <button type="submit" className="knop-primair flex-1" disabled={isPending}>
+                  Opslaan
+                </button>
+                <button type="button" className="knop-secundair" onClick={() => setFormOpen(false)}>
+                  Annuleren
+                </button>
+              </div>
+            </form>
+          </Uitklapbaar>
+          {!formOpen && (
+            <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
+              <Plus size={18} strokeWidth={2.5} /> Toevoegen
             </button>
-            <button type="button" className="knop-secundair" onClick={() => setFormOpen(false)}>
-              Annuleren
-            </button>
-          </div>
-        </form>
-      </Uitklapbaar>
-      {!formOpen && (
-        <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
-          <Plus size={18} strokeWidth={2.5} /> Toevoegen
-        </button>
+          )}
+        </>
       )}
     </div>
   );

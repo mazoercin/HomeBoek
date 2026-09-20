@@ -78,7 +78,7 @@ export async function login(_prevState: LoginState, formData: FormData): Promise
   if (!profiel) {
     logger.warn({
       code: "AUTH_001",
-      message: "Ingelogde gebruiker had nog geen profiel — alsnog aangemaakt",
+      message: "Ingelogde gebruiker had nog geen profiel, alsnog aangemaakt",
       context: { gebruikerId: data.user.id },
     });
     profiel = await maakGebruikersProfiel({

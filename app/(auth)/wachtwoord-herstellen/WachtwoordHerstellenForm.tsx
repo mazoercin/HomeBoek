@@ -60,7 +60,7 @@ export function WachtwoordHerstellenForm() {
           <CircleAlert size={24} color="#F43F5E" strokeWidth={2.25} />
         </div>
         <p className="font-semibold text-tekst-primair">Deze link werkt niet meer</p>
-        <p className="text-sm text-tekst-secundair mt-1">Verlopen of al gebruikt — vraag gerust een nieuwe aan.</p>
+        <p className="text-sm text-tekst-secundair mt-1">Verlopen of al gebruikt. Vraag gerust een nieuwe aan.</p>
         <Link href="/wachtwoord-vergeten" className="knop-primair w-full mt-4">
           Vraag een nieuwe link aan
         </Link>

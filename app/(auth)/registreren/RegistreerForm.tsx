@@ -77,7 +77,7 @@ export function RegistreerForm() {
           required
           className="veld-input"
         />
-        <p className="text-xs text-tekst-secundair mt-1.5">Mag verzonnen zijn — dit is wat je gebruikt om in te loggen.</p>
+        <p className="text-xs text-tekst-secundair mt-1.5">Mag verzonnen zijn. Dit is wat je gebruikt om in te loggen.</p>
       </div>
 
       <div>

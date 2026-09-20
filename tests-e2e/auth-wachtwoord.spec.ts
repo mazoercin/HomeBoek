@@ -45,7 +45,7 @@ test.describe("Registratie — optioneel e-mailadres", () => {
     await expect(emailVeld).toBeVisible();
     await expect(emailVeld).not.toHaveAttribute("required", "");
     await expect(page.getByText(/Optioneel\. Alleen nodig om je wachtwoord te herstellen/)).toBeVisible();
-    await expect(page.getByText(/Mag verzonnen zijn — dit is wat je gebruikt om in te loggen\./)).toBeVisible();
+    await expect(page.getByText(/Mag verzonnen zijn\. Dit is wat je gebruikt om in te loggen\./)).toBeVisible();
   });
 
   test("leeg e-mailveld: waarschuwingskaart verschijnt en houdt de echte submit tegen", async ({ page }) => {

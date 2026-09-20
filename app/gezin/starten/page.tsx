@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSessie } from "@/lib/auth/require-role";
 import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
+import { huidigeMaandInBrussel } from "@/lib/calculations/maand";
 import { verwijderMijnAccount } from "@/app/gezin/actions";
 import { VerwijderAccountFormulier } from "@/components/instellingen/VerwijderAccountFormulier";
 
@@ -39,7 +40,7 @@ export default async function StartHouseholdPagina({
         <div className="kaart max-w-sm w-full animate-fade-in-up space-y-3">
           <p className="font-bold text-tekst-primair">Account verwijderen</p>
           <p className="text-sm text-tekst-secundair">
-            Er is geen huishouden meer aan dit account gekoppeld — waarschijnlijk omdat een eerdere poging om
+            Er is geen huishouden meer aan dit account gekoppeld, waarschijnlijk omdat een eerdere poging om
             je account te verwijderen niet volledig afrondde. Rond dit hier af.
           </p>
           <VerwijderAccountFormulier onVerwijderen={verwijderMijnAccount} />
@@ -61,7 +62,7 @@ export default async function StartHouseholdPagina({
     redirect("/dashboard");
   }
 
-  const { error } = await supabase.rpc("create_household", { p_name: "Ons gezin" });
+  const { data: nieuwHouseholdId, error } = await supabase.rpc("create_household", { p_name: "Ons gezin" });
 
   if (error) {
     logger.error({
@@ -83,6 +84,24 @@ export default async function StartHouseholdPagina({
         </div>
       </main>
     );
+  }
+
+  // Meteen de huidige maand ook registreren: zonder dit landt een
+  // gloednieuwe gebruiker op de "deze maand is nog niet geregistreerd"
+  // -tussenstap en moet die eerst zelf "Registreren" klikken voor hij
+  // iets kan invullen. Best-effort: mislukt dit, dan toont
+  // /dashboard/[maand] gewoon die tussenstap zoals voorheen — dat blokkeert
+  // de nieuwe gebruiker niet.
+  const { error: maandError } = await supabase.rpc("registreer_maand", {
+    p_household_id: nieuwHouseholdId,
+    p_maand: huidigeMaandInBrussel(),
+  });
+  if (maandError) {
+    logger.warn({
+      code: "DB_001",
+      message: "Kon huidige maand niet automatisch registreren bij nieuw huishouden",
+      context: { gebruikerId: sessie.gebruikerId, error: maandError.message },
+    });
   }
 
   redirect("/dashboard");

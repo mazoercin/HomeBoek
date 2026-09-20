@@ -3,13 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { maakServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger.server";
-import { vereisHousehold } from "@/lib/auth/household";
+import { vereisHousehold, type HouseholdContext } from "@/lib/auth/household";
 import type { InkomenBron, InkomenFrequentie } from "@/types/database";
 import type { KostInvoer } from "@/types/dashboard-acties";
 
 function opnieuwValideren() {
   revalidatePath("/dashboard/[maand]", "page");
   revalidatePath("/overzicht");
+}
+
+/**
+ * Wie de actie uitvoerde, voor in elke foutmelding in het Logboek — de
+ * eigenaar (of admin) moet altijd meteen kunnen zien welk gezinslid een
+ * fout raakte, niet enkel dát er iets misging.
+ */
+function wie(ctx: HouseholdContext): { gebruikerId: string; gebruikersnaam: string; householdId: string } {
+  return { gebruikerId: ctx.gebruikerId, gebruikersnaam: ctx.gebruikersnaam, householdId: ctx.householdId };
 }
 
 /**
@@ -22,13 +31,14 @@ function opnieuwValideren() {
 async function veiligUitvoeren(
   code: string,
   bericht: string,
+  ctx: HouseholdContext,
   context: Record<string, unknown>,
   actie: () => PromiseLike<{ error: { message: string } | null }>
 ): Promise<{ gelukt: boolean; foutmelding?: string }> {
   try {
     const { error } = await actie();
     if (error) {
-      logger.error({ code, message: bericht, context: { ...context, error: error.message } });
+      logger.error({ code, message: bericht, context: { ...wie(ctx), ...context, error: error.message } });
       return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
     }
     opnieuwValideren();
@@ -37,7 +47,7 @@ async function veiligUitvoeren(
     logger.error({
       code,
       message: bericht,
-      context: { ...context, error: error instanceof Error ? error.message : String(error) },
+      context: { ...wie(ctx), ...context, error: error instanceof Error ? error.message : String(error) },
     });
     return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
   }
@@ -52,7 +62,8 @@ export async function zetDashboardVolgorde(volgorde: string[]) {
   return veiligUitvoeren(
     "DB_001",
     "Kon dashboard-volgorde niet opslaan",
-    { householdId: context.householdId },
+    context,
+    {},
     () => supabase.rpc("zet_dashboard_volgorde", { p_household_id: context.householdId, p_volgorde: volgorde })
   );
 }
@@ -62,7 +73,7 @@ export async function zetDashboardVolgorde(volgorde: string[]) {
 export async function zetVasteKostBetaald(id: string, betaald: boolean) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon betaald-status van vaste kost niet bijwerken", { id, betaald }, () =>
+  return veiligUitvoeren("DB_001", "Kon betaald-status van vaste kost niet bijwerken", context, { id, betaald }, () =>
     supabase.from("vaste_kosten").update({ betaald }).eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -70,7 +81,7 @@ export async function zetVasteKostBetaald(id: string, betaald: boolean) {
 export async function zetFactuurBetaald(id: string, betaald: boolean) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon betaald-status van factuur niet bijwerken", { id, betaald }, () =>
+  return veiligUitvoeren("DB_001", "Kon betaald-status van factuur niet bijwerken", context, { id, betaald }, () =>
     supabase.from("facturen").update({ betaald }).eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -78,7 +89,7 @@ export async function zetFactuurBetaald(id: string, betaald: boolean) {
 export async function zetExtraUitgaveGeskipt(id: string, geskipt: boolean) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon skip-status van extra uitgave niet bijwerken", { id, geskipt }, () =>
+  return veiligUitvoeren("DB_001", "Kon skip-status van extra uitgave niet bijwerken", context, { id, geskipt }, () =>
     supabase.from("extra_uitgaven").update({ geskipt }).eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -87,7 +98,7 @@ export async function zetExtraUitgaveGeskipt(id: string, geskipt: boolean) {
 export async function pasWatAlsToe(extraUitgaveIds: string[]) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon wat-als-keuze niet opslaan", { extraUitgaveIds }, () =>
+  return veiligUitvoeren("DB_001", "Kon wat-als-keuze niet opslaan", context, { extraUitgaveIds }, () =>
     supabase.from("extra_uitgaven").update({ geskipt: true }).in("id", extraUitgaveIds).eq("household_id", context.householdId)
   );
 }
@@ -97,7 +108,7 @@ export async function pasWatAlsToe(extraUitgaveIds: string[]) {
 export async function voegVasteKostToe(data: KostInvoer, maand: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon vaste kost niet toevoegen", { data, maand }, () =>
+  return veiligUitvoeren("DB_001", "Kon vaste kost niet toevoegen", context, { data, maand }, () =>
     supabase.from("vaste_kosten").insert({ ...data, maand, household_id: context.householdId })
   );
 }
@@ -105,7 +116,7 @@ export async function voegVasteKostToe(data: KostInvoer, maand: string) {
 export async function verwijderVasteKost(id: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon vaste kost niet verwijderen", { id }, () =>
+  return veiligUitvoeren("DB_001", "Kon vaste kost niet verwijderen", context, { id }, () =>
     supabase.from("vaste_kosten").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -113,7 +124,7 @@ export async function verwijderVasteKost(id: string) {
 export async function voegFactuurToe(data: KostInvoer, maand: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon factuur niet toevoegen", { data, maand }, () =>
+  return veiligUitvoeren("DB_001", "Kon factuur niet toevoegen", context, { data, maand }, () =>
     supabase.from("facturen").insert({ ...data, maand, household_id: context.householdId })
   );
 }
@@ -121,7 +132,7 @@ export async function voegFactuurToe(data: KostInvoer, maand: string) {
 export async function verwijderFactuur(id: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon factuur niet verwijderen", { id }, () =>
+  return veiligUitvoeren("DB_001", "Kon factuur niet verwijderen", context, { id }, () =>
     supabase.from("facturen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -156,7 +167,7 @@ export async function voegExtraUitgaveToe(
       logger.error({
         code: "DB_001",
         message: "Kon extra uitgave niet toevoegen",
-        context: { data, maand, error: error.message },
+        context: { ...wie(context), data, maand, error: error.message },
       });
       return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
     }
@@ -167,7 +178,7 @@ export async function voegExtraUitgaveToe(
     logger.error({
       code: "DB_001",
       message: "Kon extra uitgave niet toevoegen",
-      context: { data, maand, error: error instanceof Error ? error.message : String(error) },
+      context: { ...wie(context), data, maand, error: error instanceof Error ? error.message : String(error) },
     });
     return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
   }
@@ -176,7 +187,7 @@ export async function voegExtraUitgaveToe(
 export async function verwijderExtraUitgave(id: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon extra uitgave niet verwijderen", { id }, () =>
+  return veiligUitvoeren("DB_001", "Kon extra uitgave niet verwijderen", context, { id }, () =>
     supabase.from("extra_uitgaven").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -191,7 +202,7 @@ export async function voegDoelToe(data: {
 }) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon doel niet toevoegen", { data }, () =>
+  return veiligUitvoeren("DB_001", "Kon doel niet toevoegen", context, { data }, () =>
     supabase.from("doelen").insert({ ...data, household_id: context.householdId })
   );
 }
@@ -199,7 +210,7 @@ export async function voegDoelToe(data: {
 export async function verwijderDoel(id: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon doel niet verwijderen", { id }, () =>
+  return veiligUitvoeren("DB_001", "Kon doel niet verwijderen", context, { id }, () =>
     supabase.from("doelen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -207,18 +218,19 @@ export async function verwijderDoel(id: string) {
 export async function zetDoelGepauzeerd(id: string, gepauzeerd: boolean) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon doel niet pauzeren/hervatten", { id, gepauzeerd }, () =>
+  return veiligUitvoeren("DB_001", "Kon doel niet pauzeren/hervatten", context, { id, gepauzeerd }, () =>
     supabase.from("doelen").update({ gepauzeerd }).eq("id", id).eq("household_id", context.householdId)
   );
 }
 
 /** Herschrijft de prioriteit van alle doelen in één keer op basis van hun nieuwe volgorde (sleep-en-neerzet). */
 export async function herschikDoelen(doelIdsInNieuweVolgorde: string[]) {
-  await vereisHousehold();
+  const context = await vereisHousehold();
   const supabase = maakServerClient();
   return veiligUitvoeren(
     "DB_001",
     "Kon doelen niet herschikken",
+    context,
     { doelIdsInNieuweVolgorde },
     () => supabase.rpc("herschik_doelen", { p_doel_ids: doelIdsInNieuweVolgorde })
   );
@@ -229,7 +241,7 @@ export async function herschikDoelen(doelIdsInNieuweVolgorde: string[]) {
 export async function voegInvesteringToe(naam: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon investering niet toevoegen", { naam }, () =>
+  return veiligUitvoeren("DB_001", "Kon investering niet toevoegen", context, { naam }, () =>
     supabase.from("investeringen").insert({ naam, household_id: context.householdId })
   );
 }
@@ -242,7 +254,7 @@ export async function voegInvesteringTransactieToe(data: {
 }) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon investering-transactie niet toevoegen", { data }, () =>
+  return veiligUitvoeren("DB_001", "Kon investering-transactie niet toevoegen", context, { data }, () =>
     supabase.from("investering_transacties").insert({ ...data, household_id: context.householdId })
   );
 }
@@ -250,7 +262,7 @@ export async function voegInvesteringTransactieToe(data: {
 export async function hernoemInvestering(id: string, naam: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon investering niet hernoemen", { id, naam }, () =>
+  return veiligUitvoeren("DB_001", "Kon investering niet hernoemen", context, { id, naam }, () =>
     supabase.from("investeringen").update({ naam }).eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -258,7 +270,7 @@ export async function hernoemInvestering(id: string, naam: string) {
 export async function verwijderInvestering(id: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon investering niet verwijderen", { id }, () =>
+  return veiligUitvoeren("DB_001", "Kon investering niet verwijderen", context, { id }, () =>
     supabase.from("investeringen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -274,7 +286,7 @@ export async function voegDoelBijdrageToe(data: {
 }) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon doel-bijdrage niet toevoegen", { data }, () =>
+  return veiligUitvoeren("DB_001", "Kon doel-bijdrage niet toevoegen", context, { data }, () =>
     supabase.from("doel_bijdragen").insert({ ...data, household_id: context.householdId })
   );
 }
@@ -287,7 +299,7 @@ export async function voegInkomenToe(
 ) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon inkomen niet toevoegen", { data, maand }, () =>
+  return veiligUitvoeren("DB_001", "Kon inkomen niet toevoegen", context, { data, maand }, () =>
     supabase.from("inkomen").insert({ ...data, maand, household_id: context.householdId })
   );
 }
@@ -295,7 +307,7 @@ export async function voegInkomenToe(
 export async function verwijderInkomen(id: string) {
   const context = await vereisHousehold();
   const supabase = maakServerClient();
-  return veiligUitvoeren("DB_001", "Kon inkomen niet verwijderen", { id }, () =>
+  return veiligUitvoeren("DB_001", "Kon inkomen niet verwijderen", context, { id }, () =>
     supabase.from("inkomen").delete().eq("id", id).eq("household_id", context.householdId)
   );
 }
@@ -346,7 +358,7 @@ export async function zetInkomenWeekBedragen(inkomenId: string, weekBedragen: { 
     logger.error({
       code: "DB_001",
       message: "Kon weekbedragen niet opslaan",
-      context: { inkomenId, error: error instanceof Error ? error.message : String(error) },
+      context: { ...wie(context), inkomenId, error: error instanceof Error ? error.message : String(error) },
     });
     return { gelukt: false, foutmelding: "Kon je gegevens niet opslaan, probeer opnieuw." };
   }
@@ -382,7 +394,7 @@ export async function registreerNieuweMaand(
       logger.error({
         code: "DB_001",
         message: "Kon nieuwe maand niet registreren",
-        context: { householdId: context.householdId, nieuweMaand, kopieerVan, error: error.message },
+        context: { ...wie(context), nieuweMaand, kopieerVan, error: error.message },
       });
       return { gelukt: false, foutmelding: "Kon de nieuwe maand niet aanmaken." };
     }
@@ -390,7 +402,7 @@ export async function registreerNieuweMaand(
     logger.error({
       code: "DB_001",
       message: "Onverwachte fout bij registreren van nieuwe maand",
-      context: { nieuweMaand, kopieerVan, error: error instanceof Error ? error.message : String(error) },
+      context: { ...wie(context), nieuweMaand, kopieerVan, error: error instanceof Error ? error.message : String(error) },
     });
     return { gelukt: false, foutmelding: "Kon de nieuwe maand niet aanmaken." };
   }

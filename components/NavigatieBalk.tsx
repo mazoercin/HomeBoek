@@ -3,19 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, Receipt, Target, TrendingUp, CalendarDays, Users, Menu, X, LogOut, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Users, Menu, X, LogOut, ShieldCheck } from "lucide-react";
 import type { HouseholdRol } from "@/types/database";
 import { Logo } from "@/components/ui/Logo";
 import { Uitklapbaar } from "@/components/ui/Uitklapbaar";
 import { uitloggen } from "@/app/(dashboard)/logout-action";
-
-const LINKS = [
-  { pad: "", label: "Dashboard", icoon: LayoutDashboard },
-  { pad: "#inkomen", label: "Inkomen", icoon: Wallet },
-  { pad: "#uitgaven", label: "Uitgaven", icoon: Receipt },
-  { pad: "#doelen", label: "Spaarpot", icoon: Target },
-  { pad: "#investeringen", label: "Investeringen", icoon: TrendingUp },
-];
 
 const MAAND_IN_PAD = /^\/dashboard\/(\d{4}-\d{2})/;
 
@@ -24,8 +16,13 @@ const MAAND_IN_PAD = /^\/dashboard\/(\d{4}-\d{2})/;
  * Op desktop staan de nav-links gewoon rechts in diezelfde balk. Op
  * mobiel zit alle navigatie achter een hamburger-knop: die klapt
  * vloeiend een menu open onder de kopbalk (i.p.v. een drukke tab-bar
- * onderaan), en sluit meteen weer zodra je een link aantikt — de
- * pagina scrollt daarna vloeiend naar het juiste kader.
+ * onderaan), en sluit meteen weer zodra je een link aantikt.
+ *
+ * Bevat bewust geen losse links naar Inkomen/Uitgaven/Spaarpot/
+ * Investeringen: die verwezen naar een #anker binnen het dashboard, en
+ * dat automatisch-scrollen-naar-dat-anker bleek niet betrouwbaar. Elk
+ * kader staat toch al gewoon op het dashboard zelf — scrollen kan
+ * prima manueel.
  */
 export function NavigatieBalk({ rol, isAdmin = false }: { rol: HouseholdRol; isAdmin?: boolean }) {
   const [gescrold, setGescrold] = useState(false);
@@ -50,13 +47,13 @@ export function NavigatieBalk({ rol, isAdmin = false }: { rol: HouseholdRol; isA
   const dashboardBasis = maandMatch ? `/dashboard/${maandMatch[1]}` : "/dashboard";
 
   const alleLinks = [
-    ...LINKS.map((link) => ({ ...link, href: `${dashboardBasis}${link.pad}` })),
-    { href: "/overzicht", label: "Overzicht", icoon: CalendarDays, pad: "" },
+    { href: dashboardBasis, label: "Dashboard", icoon: LayoutDashboard },
+    { href: "/overzicht", label: "Overzicht", icoon: CalendarDays },
     // `rol` bepaalt binnen de Gezin-pagina zelf welke acties zichtbaar
     // zijn (rol wijzigen, uitnodigen, ...) — de link is voor elk lid nuttig.
-    { href: "/instellingen", label: "Gezin", icoon: Users, pad: "" },
+    { href: "/instellingen", label: "Gezin", icoon: Users },
     // Enkel zichtbaar voor het vaste admin-account (zie lib/auth/admin.ts).
-    ...(isAdmin ? [{ href: "/admin", label: "Admin", icoon: ShieldCheck, pad: "" }] : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icoon: ShieldCheck }] : []),
   ];
 
   return (

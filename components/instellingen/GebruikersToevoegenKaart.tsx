@@ -68,7 +68,7 @@ export function GebruikersToevoegenKaart({ aantalExtraLeden, onAanmaken }: Props
             <p className="text-xs text-tekst-secundair">
               {limietBereikt
                 ? `Max. ${MAX_EXTRA_LEDEN} extra gebruikers bereikt.`
-                : "Maak zelf een account aan — geef gebruikersnaam en wachtwoord door."}
+                : "Maak zelf een account aan: geef gebruikersnaam en wachtwoord door."}
             </p>
           </div>
         </div>
@@ -82,7 +82,7 @@ export function GebruikersToevoegenKaart({ aantalExtraLeden, onAanmaken }: Props
       <Uitklapbaar open={open && !limietBereikt}>
         {aangemaakt ? (
           <div className="rounded-xl bg-succes-bg border border-succes/20 p-4 space-y-3">
-            <p className="text-sm text-tekst-primair font-semibold">Account aangemaakt — geef dit door:</p>
+            <p className="text-sm text-tekst-primair font-semibold">Account aangemaakt, geef dit door:</p>
             <div className="space-y-2">
               <div>
                 <label className="veld-label">Gebruikersnaam</label>
@@ -128,8 +128,8 @@ export function GebruikersToevoegenKaart({ aantalExtraLeden, onAanmaken }: Props
               <div>
                 <label className="veld-label">Rol</label>
                 <select name="rol" className="veld-input" defaultValue="editor">
-                  <option value="editor">Editor — mag invullen</option>
-                  <option value="viewer">Viewer — kijkt mee</option>
+                  <option value="editor">Editor: mag invullen</option>
+                  <option value="viewer">Viewer: kijkt mee</option>
                 </select>
               </div>
               <div>

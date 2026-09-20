@@ -41,6 +41,8 @@ interface Props {
     notitie: string | null;
     aftrekken_van_inkomen: boolean;
   }) => ActieResultaat;
+  /** Een viewer mag niets toevoegen — de knoppen/formulieren verschijnen dan niet. */
+  magToevoegen?: boolean;
 }
 
 /** Doelen zijn goud-vrij hier — investeringen krijgen hun eigen sectie op het dashboard. */
@@ -53,6 +55,7 @@ export function DoelenSectie({
   onPauzeren,
   onHerschikken,
   onBijdrageToevoegen,
+  magToevoegen = true,
 }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -134,14 +137,15 @@ export function DoelenSectie({
       <h2 className="text-lg font-bold tracking-tight mb-1">Spaarpot voor doelen</h2>
       <p className="text-xs text-tekst-secundair mb-4">Houd het grip-icoon vast om de volgorde te verslepen.</p>
 
-      {volgorde.length === 0 && !formOpen && (
+      {volgorde.length === 0 && !formOpen && magToevoegen && (
         <StapTip
           stapNummer={5}
           titel="Stel je eerste spaardoel in (optioneel)"
           uitleg="Iets om voor te sparen, met een doelbedrag en hoeveel je er per maand voor opzij zet."
-          voorbeeld="Iphone 18 — €1200,00 doel, €100,00/maand"
+          voorbeeld="Iphone 18: €1200,00 doel, €100,00/maand"
         />
       )}
+      {volgorde.length === 0 && !magToevoegen && <p className="text-sm text-tekst-secundair">Nog niets ingevuld.</p>}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={opDragEinde}>
         <SortableContext items={volgorde.map((d) => d.id)} strategy={verticalListSortingStrategy}>
@@ -164,6 +168,7 @@ export function DoelenSectie({
                   onVerwijderen={onVerwijderen}
                   onBijdrageToevoegen={onBijdrageToevoegen}
                   startTransition={startTransition}
+                  magToevoegen={magToevoegen}
                 />
               );
             })}
@@ -171,35 +176,39 @@ export function DoelenSectie({
         </SortableContext>
       </DndContext>
 
-      <Uitklapbaar open={formOpen}>
-        <form action={submit} className="space-y-3 border-t border-rand pt-4">
-          <div>
-            <label className="veld-label">Naam</label>
-            <input name="naam" className="veld-input" required />
-          </div>
-          <div>
-            <label className="veld-label">Doelbedrag (€)</label>
-            <input name="target_bedrag" type="number" inputMode="decimal" step="0.01" min="0.01" className="veld-input" required />
-          </div>
-          <div>
-            <label className="veld-label">Bedrag per maand (€)</label>
-            <input name="maandelijks_bedrag" type="number" inputMode="decimal" step="0.01" min="0" className="veld-input" required />
-          </div>
-          {fout && <p className="veld-fout">{fout}</p>}
-          <div className="flex gap-2">
-            <button type="submit" className="knop-primair flex-1" disabled={isPending}>
-              Opslaan
+      {magToevoegen && (
+        <>
+          <Uitklapbaar open={formOpen}>
+            <form action={submit} className="space-y-3 border-t border-rand pt-4">
+              <div>
+                <label className="veld-label">Naam</label>
+                <input name="naam" className="veld-input" required />
+              </div>
+              <div>
+                <label className="veld-label">Doelbedrag (€)</label>
+                <input name="target_bedrag" type="number" inputMode="decimal" step="0.01" min="0.01" className="veld-input" required />
+              </div>
+              <div>
+                <label className="veld-label">Bedrag per maand (€)</label>
+                <input name="maandelijks_bedrag" type="number" inputMode="decimal" step="0.01" min="0" className="veld-input" required />
+              </div>
+              {fout && <p className="veld-fout">{fout}</p>}
+              <div className="flex gap-2">
+                <button type="submit" className="knop-primair flex-1" disabled={isPending}>
+                  Opslaan
+                </button>
+                <button type="button" className="knop-secundair" onClick={() => setFormOpen(false)}>
+                  Annuleren
+                </button>
+              </div>
+            </form>
+          </Uitklapbaar>
+          {!formOpen && (
+            <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
+              <Plus size={18} strokeWidth={2.5} /> Doel toevoegen
             </button>
-            <button type="button" className="knop-secundair" onClick={() => setFormOpen(false)}>
-              Annuleren
-            </button>
-          </div>
-        </form>
-      </Uitklapbaar>
-      {!formOpen && (
-        <button type="button" className="knop-secundair w-full gap-1.5" onClick={() => setFormOpen(true)}>
-          <Plus size={18} strokeWidth={2.5} /> Doel toevoegen
-        </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -215,6 +224,7 @@ interface DoelRijProps {
   onVerwijderen: Props["onVerwijderen"];
   onBijdrageToevoegen: Props["onBijdrageToevoegen"];
   startTransition: React.TransitionStartFunction;
+  magToevoegen: boolean;
 }
 
 function DoelRij({
@@ -227,6 +237,7 @@ function DoelRij({
   onVerwijderen,
   onBijdrageToevoegen,
   startTransition,
+  magToevoegen,
 }: DoelRijProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: doel.id });
   const [stortingOpen, setStortingOpen] = useState(false);
@@ -306,48 +317,52 @@ function DoelRij({
               : `Bereikt over ${projectie.maanden} maand${projectie.maanden === 1 ? "" : "en"} (${projectie.datum})`}
       </p>
 
-      <Uitklapbaar open={stortingOpen}>
-        <form action={submitStorting} className="space-y-2 pt-2">
-          <div className="flex gap-1.5">
-            <input
-              name="bedrag"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0.01"
-              placeholder="Bedrag (€)"
-              className="veld-input !min-h-[36px] text-sm flex-1"
-              required
-              autoFocus
-            />
-            <button type="submit" className="knop-primair !min-h-[36px] !px-4 !text-sm" disabled={isPending}>
-              OK
-            </button>
-          </div>
-          <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2">
-            <span className="text-xs text-tekst-secundair leading-tight">
-              Aftrekken van je inkomen deze maand?
-            </span>
-            <Switch
-              aan={aftrekken}
-              onWijzig={() => setAftrekken((v) => !v)}
-              label={aftrekken ? "Niet meer aftrekken van je inkomen" : "Aftrekken van je inkomen deze maand"}
-              kleurAan="primair"
-            />
-          </div>
-        </form>
-        {stortingFout && <p className="veld-fout !mt-1 !text-xs">{stortingFout}</p>}
-      </Uitklapbaar>
+      {magToevoegen && (
+        <Uitklapbaar open={stortingOpen}>
+          <form action={submitStorting} className="space-y-2 pt-2">
+            <div className="flex gap-1.5">
+              <input
+                name="bedrag"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0.01"
+                placeholder="Bedrag (€)"
+                className="veld-input !min-h-[36px] text-sm flex-1"
+                required
+                autoFocus
+              />
+              <button type="submit" className="knop-primair !min-h-[36px] !px-4 !text-sm" disabled={isPending}>
+                OK
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2">
+              <span className="text-xs text-tekst-secundair leading-tight">
+                Aftrekken van je inkomen deze maand?
+              </span>
+              <Switch
+                aan={aftrekken}
+                onWijzig={() => setAftrekken((v) => !v)}
+                label={aftrekken ? "Niet meer aftrekken van je inkomen" : "Aftrekken van je inkomen deze maand"}
+                kleurAan="primair"
+              />
+            </div>
+          </form>
+          {stortingFout && <p className="veld-fout !mt-1 !text-xs">{stortingFout}</p>}
+        </Uitklapbaar>
+      )}
 
       <div className="flex gap-2 mt-3">
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => setStortingOpen((v) => !v)}
-          className="knop-secundair min-h-[34px] px-3 text-xs gap-1.5"
-        >
-          <PiggyBank size={13} strokeWidth={2.5} /> Storting
-        </button>
+        {magToevoegen && (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setStortingOpen((v) => !v)}
+            className="knop-secundair min-h-[34px] px-3 text-xs gap-1.5"
+          >
+            <PiggyBank size={13} strokeWidth={2.5} /> Storting
+          </button>
+        )}
         <button
           type="button"
           disabled={isPending}

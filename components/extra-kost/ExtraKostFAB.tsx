@@ -30,7 +30,7 @@ export function ExtraKostFAB({ onKlik }: Props) {
         aria-label="Extra kost toevoegen"
         title="Extra kost toevoegen (sneltoets: N)"
         style={{
-          bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))",
+          bottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px))",
           right: "calc(1.25rem + env(safe-area-inset-right, 0px))",
         }}
         className="absolute pointer-events-auto h-14 w-14 flex items-center justify-center rounded-full bg-gradient-primair text-white

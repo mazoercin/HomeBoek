@@ -99,7 +99,7 @@ export function HouseholdNaamKaart({ huidigeNaam, huidigeCurrency, kanBewerken, 
         </form>
       ) : (
         <p className="text-sm text-tekst-secundair">
-          <span className="font-semibold text-tekst-primair">{huidigeNaam}</span> — enkel de eigenaar kan dit wijzigen.
+          <span className="font-semibold text-tekst-primair">{huidigeNaam}</span>. Enkel de eigenaar kan dit wijzigen.
         </p>
       )}
       {fout && <p className="veld-fout mt-2">{fout}</p>}

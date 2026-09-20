@@ -48,7 +48,7 @@ export function HerstelEmailKaart({ huidigeEmail, isNepAdres, onOpslaan }: Props
         <div>
           <h2 className="text-lg font-bold tracking-tight leading-tight">Herstel-e-mailadres</h2>
           <p className="text-xs text-tekst-secundair">
-            Je logt in met je gebruikersnaam — dit adres is enkel nodig om ooit je wachtwoord te kunnen herstellen.
+            Je logt in met je gebruikersnaam. Dit adres is enkel nodig om ooit je wachtwoord te kunnen herstellen.
           </p>
         </div>
       </div>
@@ -57,7 +57,7 @@ export function HerstelEmailKaart({ huidigeEmail, isNepAdres, onOpslaan }: Props
         <div className="flex items-start gap-2.5 text-sm">
           <MailCheck size={18} color="#4F46E5" strokeWidth={2.25} className="shrink-0 mt-0.5" />
           <p className="text-tekst-secundair">
-            We hebben een bevestigingsmail gestuurd. Klik op de link daarin om de wijziging af te ronden — tot dan blijft
+            We hebben een bevestigingsmail gestuurd. Klik op de link daarin om de wijziging af te ronden. Tot dan blijft
             je huidige inlog gewoon werken.
           </p>
         </div>

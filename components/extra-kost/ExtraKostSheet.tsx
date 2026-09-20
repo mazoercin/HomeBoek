@@ -31,8 +31,8 @@ const BETAALMETHODEN: { waarde: ExtraKostBetaalmethode; label: string }[] = [
  * springen. Altijd gemonteerd, enkel de inhoud wisselt — geen reflow.
  */
 const BETAALMETHODE_UITLEG: Record<ExtraKostBetaalmethode, string> = {
-  bankkaart: "Gewoon van je rekening betaald — telt meteen mee als uitgegeven geld.",
-  visa: "Komt bij Facturen te staan — dat bedrag moet je nog terugbetalen aan je kaart.",
+  bankkaart: "Gewoon van je rekening betaald, telt meteen mee als uitgegeven geld.",
+  visa: "Komt bij Facturen te staan: dat bedrag moet je nog terugbetalen aan je kaart.",
   maaltijdcheque: "Gaat af van je maaltijdcheques-budget, niet van je geld.",
 };
 
