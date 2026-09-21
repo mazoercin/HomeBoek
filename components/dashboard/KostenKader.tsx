@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Trash2, Plus } from "lucide-react";
 import type { Categorie, VasteKost, Factuur } from "@/types/database";
 import { CATEGORIE_INFO } from "@/types/database";
@@ -41,8 +41,47 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
   const [isPending, startTransition] = useTransition();
   const { zichtbareItems, heeftMeer, uitgeklapt, wisselUitgeklapt, aantalVerborgen } = useUitklapbareLijst(items);
 
-  const betaaldTotaal = items.filter((i) => i.betaald).reduce((s, i) => s + i.bedrag, 0);
-  const nogTeBetalenTotaal = items.filter((i) => !i.betaald).reduce((s, i) => s + i.bedrag, 0);
+  // Optimistische betaald-status: de switch springt meteen om bij een
+  // klik, in plaats van te wachten tot de server-actie + volledige
+  // dashboard-herlading (kan enkele seconden duren) rond is. Zodra de
+  // echte data hierop aansluit, verdwijnt de override vanzelf (zie
+  // effect hieronder) — bij een mislukte actie zetten we hem terug.
+  const [optimistischBetaald, setOptimistischBetaald] = useState<Record<string, boolean>>({});
+  const [bezigIds, setBezigIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setOptimistischBetaald((huidig) => {
+      const overgebleven = Object.entries(huidig).filter(([id, waarde]) => {
+        const item = items.find((i) => i.id === id);
+        return item !== undefined && item.betaald !== waarde;
+      });
+      return overgebleven.length === Object.keys(huidig).length ? huidig : Object.fromEntries(overgebleven);
+    });
+  }, [items]);
+
+  function betaaldWaarde(item: Kost) {
+    return optimistischBetaald[item.id] ?? item.betaald;
+  }
+
+  function toggleBetaald(item: Kost) {
+    const nieuw = !betaaldWaarde(item);
+    setOptimistischBetaald((o) => ({ ...o, [item.id]: nieuw }));
+    setBezigIds((s) => new Set(s).add(item.id));
+    startTransition(async () => {
+      const resultaat = await onZetBetaald(item.id, nieuw);
+      if (!resultaat.gelukt) {
+        setOptimistischBetaald((o) => ({ ...o, [item.id]: !nieuw }));
+      }
+      setBezigIds((s) => {
+        const nieuwe = new Set(s);
+        nieuwe.delete(item.id);
+        return nieuwe;
+      });
+    });
+  }
+
+  const betaaldTotaal = items.filter((i) => betaaldWaarde(i)).reduce((s, i) => s + i.bedrag, 0);
+  const nogTeBetalenTotaal = items.filter((i) => !betaaldWaarde(i)).reduce((s, i) => s + i.bedrag, 0);
 
   function submit(formData: FormData) {
     setFout(null);
@@ -108,7 +147,8 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
       <ul className="space-y-2 mb-2">
         {zichtbareItems.map((item) => {
           const info = categorieInfo(item.categorie);
-          const betaald = item.betaald;
+          const betaald = betaaldWaarde(item);
+          const bezig = bezigIds.has(item.id);
           return (
             <li
               key={item.id}
@@ -141,12 +181,9 @@ export function KostenKader({ titel, ankerId, stapTip, items, onZetBetaald, onTo
                 <Switch
                   aan={betaald}
                   label={betaald ? `${item.label} markeren als onbetaald` : `${item.label} markeren als betaald`}
-                  disabled={isPending}
-                  onWijzig={() =>
-                    startTransition(async () => {
-                      await onZetBetaald(item.id, !betaald);
-                    })
-                  }
+                  bezig={bezig}
+                  disabled={bezig}
+                  onWijzig={() => toggleBetaald(item)}
                 />
               </div>
             </li>

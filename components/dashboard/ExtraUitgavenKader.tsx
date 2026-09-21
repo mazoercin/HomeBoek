@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Trash2, Plus, SlidersHorizontal, UtensilsCrossed } from "lucide-react";
 import type { Betaalmethode, ExtraUitgave } from "@/types/database";
 import { StapTip } from "@/components/ui/StapTip";
@@ -30,6 +30,45 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
   const [fout, setFout] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const { zichtbareItems, heeftMeer, uitgeklapt, wisselUitgeklapt, aantalVerborgen } = useUitklapbareLijst(items);
+
+  // Optimistische geskipt-status: de switch springt meteen om, in
+  // plaats van te wachten tot de server-actie + volledige
+  // dashboard-herlading (kan enkele seconden duren) rond is. Zodra de
+  // echte data hierop aansluit, verdwijnt de override vanzelf (zie
+  // effect hieronder) — bij een mislukte actie zetten we hem terug.
+  const [optimistischGeskipt, setOptimistischGeskipt] = useState<Record<string, boolean>>({});
+  const [bezigIds, setBezigIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setOptimistischGeskipt((huidig) => {
+      const overgebleven = Object.entries(huidig).filter(([id, waarde]) => {
+        const item = items.find((i) => i.id === id);
+        return item !== undefined && item.geskipt !== waarde;
+      });
+      return overgebleven.length === Object.keys(huidig).length ? huidig : Object.fromEntries(overgebleven);
+    });
+  }, [items]);
+
+  function geskiptWaarde(item: ExtraUitgave) {
+    return optimistischGeskipt[item.id] ?? item.geskipt;
+  }
+
+  function toggleGeskipt(item: ExtraUitgave) {
+    const nieuw = !geskiptWaarde(item);
+    setOptimistischGeskipt((o) => ({ ...o, [item.id]: nieuw }));
+    setBezigIds((s) => new Set(s).add(item.id));
+    startTransition(async () => {
+      const resultaat = await onZetGeskipt(item.id, nieuw);
+      if (!resultaat.gelukt) {
+        setOptimistischGeskipt((o) => ({ ...o, [item.id]: !nieuw }));
+      }
+      setBezigIds((s) => {
+        const nieuwe = new Set(s);
+        nieuwe.delete(item.id);
+        return nieuwe;
+      });
+    });
+  }
 
   function submit(formData: FormData) {
     setFout(null);
@@ -70,7 +109,8 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
 
       <ul className="space-y-2 mb-2" data-testid="extra-uitgaven-lijst">
         {zichtbareItems.map((item) => {
-          const geskipt = item.geskipt;
+          const geskipt = geskiptWaarde(item);
+          const bezig = bezigIds.has(item.id);
           return (
             <li
               key={item.id}
@@ -129,12 +169,9 @@ export function ExtraUitgavenKader({ items, onToevoegen, onVerwijderen, onZetGes
                   <Switch
                     aan={!geskipt}
                     label={geskipt ? `${item.label} weer meetellen deze maand` : `${item.label} overslaan deze maand`}
-                    disabled={isPending}
-                    onWijzig={() =>
-                      startTransition(async () => {
-                        await onZetGeskipt(item.id, !geskipt);
-                      })
-                    }
+                    bezig={bezig}
+                    disabled={bezig}
+                    onWijzig={() => toggleGeskipt(item)}
                   />
                 )}
               </div>
